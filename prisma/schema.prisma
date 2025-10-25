@@ -1,0 +1,327 @@
+// Wine Cellar Database Schema
+// Based on datamodels.md
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Enums
+enum WineType {
+  red
+  white
+  rose
+  sparkling
+  dessert
+  fortified
+}
+
+enum SweetnessLevel {
+  dry
+  off_dry
+  medium
+  sweet
+  very_sweet
+}
+
+enum BodyLevel {
+  light
+  medium
+  full
+}
+
+enum IntensityLevel {
+  low
+  medium
+  high
+}
+
+enum BottleStatus {
+  in_cellar
+  consumed
+  gifted
+  other
+}
+
+enum AcquisitionMethod {
+  purchased
+  gift
+  trade
+  other
+}
+
+enum TopicType {
+  grape
+  region
+  style
+  producer
+  comparison
+}
+
+enum PreferenceType {
+  grape
+  region
+  style
+  price_sensitivity
+  characteristic
+}
+
+// Models
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String?
+  password  String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // JSON fields for preferences and settings
+  preferences Json?
+  settings    Json?
+
+  // Relations
+  bottles              Bottle[]
+  consumptionLogs      ConsumptionLog[]
+  labelScans           LabelScan[]
+  preferenceLearning   UserPreferenceLearning[]
+  accounts             Account[]
+  sessions             Session[]
+
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(uuid())
+  userId            String  @map("user_id")
+  type              String
+  provider          String
+  providerAccountId String  @map("provider_account_id")
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(uuid())
+  sessionToken String   @unique @map("session_token")
+  userId       String   @map("user_id")
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model Wine {
+  id               String   @id @default(uuid())
+  name             String
+  fullName         String?  @map("full_name")
+  vintage          Int?
+  producerName     String   @map("producer_name")
+  producerId       String?  @map("producer_id")
+
+  // Classification
+  wineType         WineType @map("wine_type")
+  style            String?
+  primaryGrape     String?  @map("primary_grape")
+  grapeVarieties   Json?    @map("grape_varieties")
+
+  // Geography
+  country          String
+  region           String
+  subRegion        String?  @map("sub_region")
+  appellation      String?
+
+  // Wine Characteristics
+  alcoholPercentage Decimal? @map("alcohol_percentage") @db.Decimal(4, 2)
+  sweetnessLevel   SweetnessLevel? @map("sweetness_level")
+  body             BodyLevel?
+  tanninLevel      IntensityLevel? @map("tannin_level")
+  acidityLevel     IntensityLevel? @map("acidity_level")
+
+  // Aging & Service
+  peakDrinkingStart Int?    @map("peak_drinking_start")
+  peakDrinkingEnd   Int?    @map("peak_drinking_end")
+  optimalServingTempMin Int? @map("optimal_serving_temp_min")
+  optimalServingTempMax Int? @map("optimal_serving_temp_max")
+  decantTimeMinutes Int?    @map("decant_time_minutes")
+
+  // AI/External Data
+  description          String?
+  tastingNotes         String?  @map("tasting_notes")
+  externalIds          Json?    @map("external_ids")
+  aiGeneratedSummary   String?  @map("ai_generated_summary")
+
+  // Metadata
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+  verified     Boolean  @default(false)
+  dataSource   String?  @map("data_source")
+
+  // Relations
+  bottles          Bottle[]
+  consumptionLogs  ConsumptionLog[]
+  priceHistory     PriceHistory[]
+  producer         Producer? @relation(fields: [producerId], references: [id])
+
+  @@map("wines")
+}
+
+model Bottle {
+  id               String   @id @default(uuid())
+  userId           String   @map("user_id")
+  wineId           String?  @map("wine_id")
+
+  // Purchase & Ownership
+  quantity         Int      @default(1)
+  purchasePrice    Decimal? @map("purchase_price") @db.Decimal(10, 2)
+  currency         String?  @default("USD")
+  purchaseDate     DateTime? @map("purchase_date")
+  purchaseLocation String?  @map("purchase_location")
+  storageLocation  String?  @map("storage_location")
+
+  // Status
+  status           BottleStatus @default(in_cellar)
+  consumedDate     DateTime?    @map("consumed_date")
+
+  // User Data
+  personalNotes    String?
+  rating           Int?
+  tags             String[]
+
+  // Metadata
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+  acquisitionMethod AcquisitionMethod @default(purchased) @map("acquisition_method")
+
+  // Relations
+  user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  wine             Wine?            @relation(fields: [wineId], references: [id])
+  consumptionLogs  ConsumptionLog[]
+  labelScans       LabelScan[]
+
+  @@map("bottles")
+}
+
+model ConsumptionLog {
+  id               String   @id @default(uuid())
+  bottleId         String   @map("bottle_id")
+  userId           String   @map("user_id")
+  wineId           String   @map("wine_id")
+
+  consumedDate     DateTime @map("consumed_date")
+  quantityConsumed Int      @default(1) @map("quantity_consumed")
+  occasion         String?
+  rating           Int?
+  tastingNotes     String?  @map("tasting_notes")
+
+  // Context
+  companions       String[]
+  location         String?
+
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  // Relations
+  bottle           Bottle   @relation(fields: [bottleId], references: [id], onDelete: Cascade)
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  wine             Wine     @relation(fields: [wineId], references: [id])
+
+  @@map("consumption_logs")
+}
+
+model LabelScan {
+  id                    String   @id @default(uuid())
+  userId                String   @map("user_id")
+  bottleId              String?  @map("bottle_id")
+  imageUrl              String   @map("image_url")
+  extractionConfidence  Float?   @map("extraction_confidence")
+  extractedData         Json     @map("extracted_data")
+  userConfirmed         Boolean? @map("user_confirmed")
+  correctionsMade       Json?    @map("corrections_made")
+  createdAt             DateTime @default(now()) @map("created_at")
+
+  // Relations
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bottle                Bottle?  @relation(fields: [bottleId], references: [id])
+
+  @@map("label_scans")
+}
+
+model Producer {
+  id           String   @id @default(uuid())
+  name         String
+  country      String
+  region       String?
+  foundedYear  Int?     @map("founded_year")
+  website      String?
+  description  String?
+  specialty    String?
+  externalIds  Json?    @map("external_ids")
+
+  // Relations
+  wines        Wine[]
+
+  @@map("producers")
+}
+
+model WineKnowledge {
+  id             String    @id @default(uuid())
+  topicType      TopicType @map("topic_type")
+  topicKey       String    @map("topic_key")
+  title          String
+  content        String
+  relatedTopics  String[]  @map("related_topics")
+  usageCount     Int       @default(0) @map("usage_count")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  @@unique([topicType, topicKey])
+  @@map("wine_knowledge")
+}
+
+model PriceHistory {
+  id           String   @id @default(uuid())
+  wineId       String   @map("wine_id")
+  vintage      Int?
+  price        Decimal  @db.Decimal(10, 2)
+  currency     String
+  source       String
+  sourceUrl    String?  @map("source_url")
+  recordedDate DateTime @map("recorded_date")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  // Relations
+  wine         Wine     @relation(fields: [wineId], references: [id], onDelete: Cascade)
+
+  @@map("price_history")
+}
+
+model UserPreferenceLearning {
+  id              String         @id @default(uuid())
+  userId          String         @map("user_id")
+  preferenceType  PreferenceType @map("preference_type")
+  preferenceValue String         @map("preference_value")
+  affinityScore   Float          @map("affinity_score")
+  confidenceScore Float          @map("confidence_score")
+  evidenceCount   Int            @map("evidence_count")
+  lastReinforced  DateTime       @map("last_reinforced")
+  createdAt       DateTime       @default(now()) @map("created_at")
+
+  // Relations
+  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_preference_learning")
+}

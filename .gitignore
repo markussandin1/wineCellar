@@ -66,3 +66,5 @@ prisma/*.db-journal
 # Uploads (local development)
 /uploads
 /public/uploads
+
+/lib/generated/prisma
