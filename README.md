@@ -103,25 +103,29 @@ See `datamodels.md` for detailed schema documentation.
 - [x] Basic layout and navigation
 - [x] PWA configuration
 
-### Phase 2: Core Bottle Management (Current)
-- [ ] Manual bottle entry form
-- [ ] Bottle list/grid view with filters
-- [ ] Bottle detail page
-- [ ] Edit/delete bottles
-- [ ] Mark as consumed with rating
+### Phase 2: Core Bottle Management ✓
+- [x] Manual bottle entry form with validation
+- [x] Bottle list/grid view with filters (type, status, search)
+- [x] Bottle detail page with all information
+- [x] Edit/delete bottles with confirmation
+- [x] Mark as consumed with rating and tasting notes
+- [x] Dashboard with real stats and insights
+- [x] Filter by wine type, status, and region
+- [x] Grid/list view toggle
 
-### Phase 3: AI Label Scanning
-- [ ] Image upload UI
-- [ ] OpenAI Vision integration
-- [ ] Review/edit extracted data
-- [ ] Wine matching algorithm
-- [ ] Storage integration
+### Phase 3: AI Label Scanning (Next)
+- [ ] Image upload UI with preview
+- [ ] OpenAI Vision integration for label extraction
+- [ ] Review/edit extracted data before saving
+- [ ] Wine matching algorithm (find existing or create new)
+- [ ] S3/Cloudflare R2 storage integration for images
 
 ### Phase 4: Intelligence Layer
-- [ ] Dashboard insights
-- [ ] Wine knowledge explanations
-- [ ] Wine comparison
-- [ ] Preference learning
+- [ ] Advanced dashboard insights (peak drinking window)
+- [ ] Wine knowledge explanations (tap grape/region)
+- [ ] Wine comparison side-by-side
+- [ ] AI preference learning from ratings
+- [ ] Recommendation engine
 
 ## Scripts
 
