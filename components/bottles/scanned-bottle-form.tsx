@@ -2,10 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Image from 'next/image';
-import { Upload, X, Check } from 'lucide-react';
-import { createBottle } from '@/app/actions/bottle';
-import { Autocomplete } from '@/components/ui/autocomplete';
+import { createBottleFromScan } from '@/app/actions/bottle';
 
 const WINE_TYPES = [
   { value: 'red', label: 'Red' },
@@ -23,40 +20,47 @@ const ACQUISITION_METHODS = [
   { value: 'other', label: 'Other' },
 ];
 
-type Placement = 'cellar' | 'watchlist';
-
-interface BottleFormProps {
-  initialPlacement?: Placement;
+interface ScannedBottleFormProps {
+  extractedData: {
+    wineName: string;
+    producerName: string;
+    vintage?: number;
+    wineType?: string;
+    country?: string;
+    region?: string;
+    subRegion?: string;
+    primaryGrape?: string;
+    confidence: number;
+    existingWineId?: string;
+    imageUrl?: string | null;
+    description?: string;
+    tastingNotes?: string;
+    aiGeneratedSummary?: string;
+  };
+  onBack: () => void;
+  initialPlacement?: 'cellar' | 'watchlist';
 }
 
-interface SelectedWine {
-  id: string;
-  name: string;
-  producerName: string;
-  vintage: number | null;
-  wineType: string;
-  country: string;
-  region: string;
-  subRegion: string | null;
-  primaryGrape: string | null;
-  primaryLabelImageUrl: string | null;
-}
-
-export function BottleForm({ initialPlacement = 'cellar' }: BottleFormProps) {
+export function ScannedBottleForm({ extractedData, onBack, initialPlacement = 'cellar' }: ScannedBottleFormProps) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedImage, setSelectedImage] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const initialWatchList = initialPlacement === 'watchlist';
   const [isWatchList, setIsWatchList] = useState(initialWatchList);
   const [quantityValue, setQuantityValue] = useState<number>(initialWatchList ? 0 : 1);
   const previousQuantityRef = useRef<number>(initialWatchList ? 1 : 1);
 
-  // Autocomplete state
-  const [producerValue, setProducerValue] = useState('');
-  const [wineNameValue, setWineNameValue] = useState('');
-  const [selectedWine, setSelectedWine] = useState<SelectedWine | null>(null);
+  // Wine information state (editable)
+  const [wineData, setWineData] = useState({
+    wineName: extractedData.wineName || '',
+    producerName: extractedData.producerName || '',
+    vintage: extractedData.vintage?.toString() || '',
+    wineType: extractedData.wineType || '',
+    country: extractedData.country || '',
+    region: extractedData.region || '',
+    subRegion: extractedData.subRegion || '',
+    primaryGrape: extractedData.primaryGrape || '',
+  });
 
   useEffect(() => {
     if (initialPlacement === 'watchlist') {
@@ -73,78 +77,6 @@ export function BottleForm({ initialPlacement = 'cellar' }: BottleFormProps) {
     }
   }, [initialPlacement]);
 
-  function handleImageSelect(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-      setError('Please select an image file');
-      return;
-    }
-
-    // Validate file size (max 10MB)
-    if (file.size > 10 * 1024 * 1024) {
-      setError('Image must be less than 10MB');
-      return;
-    }
-
-    setSelectedImage(file);
-
-    // Create preview
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setImagePreview(reader.result as string);
-    };
-    reader.readAsDataURL(file);
-  }
-
-  function handleRemoveImage() {
-    setSelectedImage(null);
-    setImagePreview(null);
-  }
-
-  // Autocomplete fetch functions
-  async function fetchProducers(query: string): Promise<string[]> {
-    try {
-      const response = await fetch(
-        `/api/wines/autocomplete?type=producer&query=${encodeURIComponent(query)}`
-      );
-      if (!response.ok) return [];
-      const data = await response.json();
-      return data.results || [];
-    } catch (error) {
-      console.error('Producer autocomplete error:', error);
-      return [];
-    }
-  }
-
-  async function fetchWines(query: string): Promise<SelectedWine[]> {
-    try {
-      const params = new URLSearchParams({
-        type: 'wine',
-        query,
-      });
-      if (producerValue) {
-        params.append('producer', producerValue);
-      }
-
-      const response = await fetch(`/api/wines/autocomplete?${params}`);
-      if (!response.ok) return [];
-      const data = await response.json();
-      return data.results || [];
-    } catch (error) {
-      console.error('Wine autocomplete error:', error);
-      return [];
-    }
-  }
-
-  function handleWineSelect(wine: SelectedWine) {
-    setSelectedWine(wine);
-    setWineNameValue(wine.name);
-    setProducerValue(wine.producerName);
-  }
-
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setIsSubmitting(true);
@@ -152,44 +84,29 @@ export function BottleForm({ initialPlacement = 'cellar' }: BottleFormProps) {
 
     const formData = new FormData(e.currentTarget);
 
-    // Enforce quantity/status for watch list entries before any uploads
     formData.set('quantity', String(quantityValue));
     formData.set('status', isWatchList ? 'other' : 'in_cellar');
     if (isWatchList) {
       formData.set('acquisitionMethod', 'other');
     }
 
+    // Add wine data
+    Object.entries(wineData).forEach(([key, value]) => {
+      if (value) formData.append(key, value);
+    });
+
+    // Add existing wine ID if we found a match
+    if (extractedData.existingWineId) {
+      formData.append('existingWineId', extractedData.existingWineId);
+    }
+
+    // Add image URL if available
+    if (extractedData.imageUrl) {
+      formData.append('imageUrl', extractedData.imageUrl);
+    }
+
     try {
-      // Upload image first if selected
-      let imageUrl = null;
-      if (selectedImage) {
-        const imageFormData = new FormData();
-        imageFormData.append('image', selectedImage);
-
-        const uploadResponse = await fetch('/api/upload-label', {
-          method: 'POST',
-          body: imageFormData,
-        });
-
-        if (!uploadResponse.ok) {
-          throw new Error('Failed to upload image');
-        }
-
-        const uploadResult = await uploadResponse.json();
-        imageUrl = uploadResult.imageUrl;
-      }
-
-      // Add image URL to form data if available
-      if (imageUrl) {
-        formData.append('labelImageUrl', imageUrl);
-      }
-
-      // Add existing wine ID if selected from autocomplete
-      if (selectedWine) {
-        formData.append('existingWineId', selectedWine.id);
-      }
-
-      const result = await createBottle(formData);
+      const result = await createBottleFromScan(formData);
       if (result.success) {
         router.push('/cellar');
         router.refresh();
@@ -208,12 +125,26 @@ export function BottleForm({ initialPlacement = 'cellar' }: BottleFormProps) {
         </div>
       )}
 
+      {extractedData.existingWineId && (
+        <div className="rounded-md bg-green-500/10 border border-green-500/20 p-4">
+          <div className="flex items-start">
+            <div className="flex-1">
+              <p className="text-sm font-medium text-green-700 dark:text-green-400">
+                ✓ Wine found in database
+              </p>
+              <p className="text-xs text-green-600 dark:text-green-500 mt-1">
+                Using existing wine information. You can still edit the details below.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex items-start justify-between rounded-md border bg-muted/40 px-4 py-3">
         <div className="pr-4">
           <p className="text-sm font-medium">Add to watch list</p>
           <p className="text-xs text-muted-foreground">
-            Save wines you want to remember without adding inventory. Quantity will be stored as zero and
-            purchase fields are optional.
+            Keep this wine for reference without adding inventory details. Quantity will be stored as zero.
           </p>
         </div>
         <label className="inline-flex items-center gap-2 text-sm font-medium">
@@ -238,91 +169,58 @@ export function BottleForm({ initialPlacement = 'cellar' }: BottleFormProps) {
         </label>
       </div>
 
-      {/* Wine Information */}
+      {/* AI-Extracted Wine Information (Editable) */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold">Wine Information</h2>
-          {selectedWine && (
-            <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
-              <Check className="h-4 w-4" />
-              <span>Using existing wine</span>
-            </div>
-          )}
+          <span className="text-xs text-muted-foreground">
+            Confidence: {Math.round(extractedData.confidence * 100)}%
+          </span>
         </div>
 
-        {/* Wine Preview (if selected from autocomplete) */}
-        {selectedWine && selectedWine.primaryLabelImageUrl && (
-          <div className="rounded-lg border bg-muted overflow-hidden">
-            <div className="relative w-full h-48">
-              <Image
-                src={selectedWine.primaryLabelImageUrl}
-                alt={`${selectedWine.name} label`}
-                fill
-                className="object-contain"
-              />
-            </div>
-          </div>
-        )}
-
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label htmlFor="producerName" className="block text-sm font-medium mb-2">
-              Producer * {!selectedWine && <span className="text-xs text-muted-foreground">(start typing for suggestions)</span>}
-            </label>
-            <Autocomplete
-              id="producerName"
-              name="producerName"
-              value={producerValue}
-              onChange={setProducerValue}
-              fetchSuggestions={fetchProducers}
-              placeholder="Marchesi di Barolo"
-              required
-              disabled={!!selectedWine}
-            />
-          </div>
-
           <div>
             <label htmlFor="wineName" className="block text-sm font-medium mb-2">
-              Wine Name * {!selectedWine && <span className="text-xs text-muted-foreground">(start typing for suggestions)</span>}
+              Wine Name *
             </label>
-            <Autocomplete
+            <input
               id="wineName"
-              name="wineName"
-              value={wineNameValue}
-              onChange={setWineNameValue}
-              onSelect={handleWineSelect}
-              fetchSuggestions={fetchWines}
-              placeholder="Barolo DOCG"
+              type="text"
+              value={wineData.wineName}
+              onChange={(e) => setWineData({ ...wineData, wineName: e.target.value })}
               required
-              disabled={!!selectedWine}
-              renderSuggestion={(wine: SelectedWine) => (
-                <div>
-                  <div className="font-medium">{wine.name}</div>
-                  <div className="text-xs text-muted-foreground">
-                    {wine.producerName} {wine.vintage ? `• ${wine.vintage}` : ''}
-                  </div>
-                </div>
-              )}
-              getSuggestionValue={(wine: SelectedWine) => wine.name}
+              className="w-full rounded-md border bg-background px-3 py-2"
             />
           </div>
-        </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label htmlFor="vintage" className="block text-sm font-medium mb-2">
               Vintage
             </label>
             <input
               id="vintage"
-              name="vintage"
               type="number"
+              value={wineData.vintage}
+              onChange={(e) => setWineData({ ...wineData, vintage: e.target.value })}
               min="1900"
               max={new Date().getFullYear() + 5}
-              defaultValue={selectedWine?.vintage || ''}
               className="w-full rounded-md border bg-background px-3 py-2"
-              placeholder="2018"
-              disabled={!!selectedWine}
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label htmlFor="producerName" className="block text-sm font-medium mb-2">
+              Producer *
+            </label>
+            <input
+              id="producerName"
+              type="text"
+              value={wineData.producerName}
+              onChange={(e) => setWineData({ ...wineData, producerName: e.target.value })}
+              required
+              className="w-full rounded-md border bg-background px-3 py-2"
             />
           </div>
 
@@ -332,10 +230,9 @@ export function BottleForm({ initialPlacement = 'cellar' }: BottleFormProps) {
             </label>
             <select
               id="wineType"
-              name="wineType"
+              value={wineData.wineType}
+              onChange={(e) => setWineData({ ...wineData, wineType: e.target.value })}
               required
-              defaultValue={selectedWine?.wineType || ''}
-              disabled={!!selectedWine}
               className="w-full rounded-md border bg-background px-3 py-2"
             >
               <option value="">Select type...</option>
@@ -355,13 +252,11 @@ export function BottleForm({ initialPlacement = 'cellar' }: BottleFormProps) {
             </label>
             <input
               id="country"
-              name="country"
               type="text"
+              value={wineData.country}
+              onChange={(e) => setWineData({ ...wineData, country: e.target.value })}
               required
-              defaultValue={selectedWine?.country || ''}
-              disabled={!!selectedWine}
               className="w-full rounded-md border bg-background px-3 py-2"
-              placeholder="Italy"
             />
           </div>
 
@@ -371,13 +266,11 @@ export function BottleForm({ initialPlacement = 'cellar' }: BottleFormProps) {
             </label>
             <input
               id="region"
-              name="region"
               type="text"
+              value={wineData.region}
+              onChange={(e) => setWineData({ ...wineData, region: e.target.value })}
               required
-              defaultValue={selectedWine?.region || ''}
-              disabled={!!selectedWine}
               className="w-full rounded-md border bg-background px-3 py-2"
-              placeholder="Piedmont"
             />
           </div>
 
@@ -387,12 +280,10 @@ export function BottleForm({ initialPlacement = 'cellar' }: BottleFormProps) {
             </label>
             <input
               id="subRegion"
-              name="subRegion"
               type="text"
-              defaultValue={selectedWine?.subRegion || ''}
-              disabled={!!selectedWine}
+              value={wineData.subRegion}
+              onChange={(e) => setWineData({ ...wineData, subRegion: e.target.value })}
               className="w-full rounded-md border bg-background px-3 py-2"
-              placeholder="Barolo DOCG"
             />
           </div>
         </div>
@@ -403,69 +294,17 @@ export function BottleForm({ initialPlacement = 'cellar' }: BottleFormProps) {
           </label>
           <input
             id="primaryGrape"
-            name="primaryGrape"
             type="text"
-            defaultValue={selectedWine?.primaryGrape || ''}
-            disabled={!!selectedWine}
+            value={wineData.primaryGrape}
+            onChange={(e) => setWineData({ ...wineData, primaryGrape: e.target.value })}
             className="w-full rounded-md border bg-background px-3 py-2"
-            placeholder="Nebbiolo"
           />
         </div>
       </div>
 
-      {/* Label Image */}
+      {/* Your Bottle Details */}
       <div className="space-y-4">
-        <h2 className="text-lg font-semibold">Label Image</h2>
-
-        {!imagePreview ? (
-          <div>
-            <label
-              htmlFor="labelImage"
-              className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed rounded-lg cursor-pointer hover:bg-accent transition-colors"
-            >
-              <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                <Upload className="h-10 w-10 mb-3 text-muted-foreground" />
-                <p className="mb-2 text-sm text-muted-foreground">
-                  <span className="font-semibold">Click to upload</span> or drag and drop
-                </p>
-                <p className="text-xs text-muted-foreground">PNG, JPG up to 10MB</p>
-              </div>
-              <input
-                id="labelImage"
-                type="file"
-                className="hidden"
-                accept="image/*"
-                onChange={handleImageSelect}
-                disabled={isSubmitting}
-              />
-            </label>
-          </div>
-        ) : (
-          <div className="relative">
-            <div className="relative w-full h-64 rounded-lg overflow-hidden border">
-              <Image
-                src={imagePreview}
-                alt="Label preview"
-                fill
-                className="object-contain"
-                sizes="(max-width: 768px) 100vw, 600px"
-              />
-            </div>
-            <button
-              type="button"
-              onClick={handleRemoveImage}
-              disabled={isSubmitting}
-              className="absolute top-2 right-2 p-2 rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/90 disabled:opacity-50"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-        )}
-      </div>
-
-      {/* Purchase Information */}
-      <div className="space-y-4">
-        <h2 className="text-lg font-semibold">Purchase Details</h2>
+        <h2 className="text-lg font-semibold">Your Bottle Details</h2>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
@@ -493,8 +332,7 @@ export function BottleForm({ initialPlacement = 'cellar' }: BottleFormProps) {
                 }
               }}
               required={!isWatchList}
-              disabled={isWatchList}
-              className="w-full rounded-md border bg-background px-3 py-2 disabled:opacity-70"
+              className="w-full rounded-md border bg-background px-3 py-2"
             />
           </div>
 
@@ -506,6 +344,7 @@ export function BottleForm({ initialPlacement = 'cellar' }: BottleFormProps) {
               id="acquisitionMethod"
               name="acquisitionMethod"
               defaultValue="purchased"
+              disabled={isWatchList}
               className="w-full rounded-md border bg-background px-3 py-2"
             >
               {ACQUISITION_METHODS.map((method) => (
@@ -529,7 +368,6 @@ export function BottleForm({ initialPlacement = 'cellar' }: BottleFormProps) {
               step="0.01"
               min="0"
               className="w-full rounded-md border bg-background px-3 py-2"
-              placeholder="45.00"
             />
             <p className="text-xs text-muted-foreground mt-1">
               Enter the price per individual bottle
@@ -543,7 +381,7 @@ export function BottleForm({ initialPlacement = 'cellar' }: BottleFormProps) {
             <select
               id="currency"
               name="currency"
-              defaultValue="USD"
+              defaultValue="SEK"
               className="w-full rounded-md border bg-background px-3 py-2"
             >
               <option value="USD">USD</option>
@@ -576,15 +414,9 @@ export function BottleForm({ initialPlacement = 'cellar' }: BottleFormProps) {
               name="purchaseLocation"
               type="text"
               className="w-full rounded-md border bg-background px-3 py-2"
-              placeholder="Wine Shop Name"
             />
           </div>
         </div>
-      </div>
-
-      {/* Storage & Notes */}
-      <div className="space-y-4">
-        <h2 className="text-lg font-semibold">Storage & Notes</h2>
 
         <div>
           <label htmlFor="storageLocation" className="block text-sm font-medium mb-2">
@@ -617,18 +449,18 @@ export function BottleForm({ initialPlacement = 'cellar' }: BottleFormProps) {
       <div className="flex gap-3 justify-end pt-4 border-t">
         <button
           type="button"
-          onClick={() => router.back()}
+          onClick={onBack}
           className="rounded-md border bg-background px-4 py-2 text-sm font-medium hover:bg-accent"
           disabled={isSubmitting}
         >
-          Cancel
+          Back
         </button>
         <button
           type="submit"
           disabled={isSubmitting}
           className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
         >
-          {isSubmitting ? 'Adding...' : 'Add Bottle'}
+          {isSubmitting ? 'Adding...' : 'Add to Cellar'}
         </button>
       </div>
     </form>

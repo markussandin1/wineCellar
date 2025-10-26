@@ -5,7 +5,12 @@ import { Search, Grid3x3, List } from 'lucide-react';
 import { useState } from 'react';
 
 const WINE_TYPES = ['all', 'red', 'white', 'rose', 'sparkling', 'dessert', 'fortified'];
-const STATUSES = ['all', 'in_cellar', 'consumed', 'gifted'];
+const STATUSES = [
+  { value: 'all', label: 'All Status' },
+  { value: 'in_cellar', label: 'In Cellar' },
+  { value: 'consumed', label: 'Consumed' },
+  { value: 'watchlist', label: 'Watch List' },
+];
 
 type ViewMode = 'grid' | 'list';
 
@@ -96,15 +101,15 @@ export function BottleFilters({
           <div className="flex gap-1">
             {STATUSES.map((status) => (
               <button
-                key={status}
-                onClick={() => updateFilter('status', status)}
+                key={status.value}
+                onClick={() => updateFilter('status', status.value)}
                 className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
-                  currentStatus === status
+                  currentStatus === status.value
                     ? 'bg-primary text-primary-foreground'
                     : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
                 }`}
               >
-                {status === 'all' ? 'All Status' : status.replace('_', ' ')}
+                {status.label}
               </button>
             ))}
           </div>

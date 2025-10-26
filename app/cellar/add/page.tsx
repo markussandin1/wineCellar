@@ -1,6 +1,6 @@
 import { auth } from '@/auth';
 import { redirect } from 'next/navigation';
-import { BottleForm } from '@/components/bottles/bottle-form';
+import { AddBottleChoice } from '@/components/bottles/add-bottle-choice';
 
 export default async function AddBottlePage() {
   const session = await auth();
@@ -12,7 +12,7 @@ export default async function AddBottlePage() {
   return (
     <div className="container mx-auto px-4 py-8 max-w-2xl">
       <h1 className="text-3xl font-bold mb-6">Add New Bottle</h1>
-      <BottleForm />
+      <AddBottleChoice />
     </div>
   );
 }

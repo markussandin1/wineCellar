@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { Wine, Home, Grid3x3, LogOut } from 'lucide-react';
+import { logout } from '@/app/actions/auth';
 
 const navItems = [
   {
@@ -52,12 +53,15 @@ export function Nav() {
           </div>
 
           <div className="flex items-center gap-4">
-            <Link
-              href="/api/auth/signout"
-              className="text-sm font-medium text-muted-foreground hover:text-foreground"
-            >
-              <LogOut className="h-4 w-4" />
-            </Link>
+            <form action={logout}>
+              <button
+                type="submit"
+                className="text-sm font-medium text-muted-foreground hover:text-foreground cursor-pointer"
+                aria-label="Log out"
+              >
+                <LogOut className="h-4 w-4" />
+              </button>
+            </form>
           </div>
         </div>
 

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Wine, MapPin, Calendar, DollarSign } from 'lucide-react';
 import { BottleFilters } from './bottle-filters';
 
@@ -14,6 +15,7 @@ type Bottle = {
   storageLocation: string | null;
   status: string;
   rating: number | null;
+  labelImageUrl: string | null;
   wine: {
     id: string;
     name: string;
@@ -23,6 +25,7 @@ type Bottle = {
     wineType: string;
     country: string;
     region: string;
+    primaryLabelImageUrl: string | null;
   } | null;
 };
 
@@ -34,12 +37,19 @@ export function BottleList({ bottles }: { bottles: Bottle[] }) {
       in_cellar: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
       consumed: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200',
       gifted: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
-      other: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
+      other: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+    };
+
+    const labels: Record<string, string> = {
+      in_cellar: 'In cellar',
+      consumed: 'Consumed',
+      gifted: 'Watch list',
+      other: 'Watch list',
     };
 
     return (
       <span className={`px-2 py-1 rounded-full text-xs font-medium ${styles[status as keyof typeof styles] || styles.other}`}>
-        {status.replace('_', ' ')}
+        {labels[status] || status.replace('_', ' ')}
       </span>
     );
   };
@@ -66,20 +76,38 @@ export function BottleList({ bottles }: { bottles: Bottle[] }) {
             <Link
               key={bottle.id}
               href={`/bottle/${bottle.id}`}
-              className="block rounded-lg border bg-card p-6 hover:shadow-lg transition-shadow"
+              className="block rounded-lg border bg-card overflow-hidden hover:shadow-lg transition-shadow"
             >
-              <div className="flex justify-between items-start mb-4">
-                <Wine className={`h-8 w-8 ${bottle.wine ? getWineTypeColor(bottle.wine.wineType) : 'text-gray-400'}`} />
-                {getStatusBadge(bottle.status)}
+              {/* Label Image */}
+              <div className="relative w-full h-48 bg-muted">
+                {(bottle.labelImageUrl || bottle.wine?.primaryLabelImageUrl) ? (
+                  <Image
+                    src={bottle.labelImageUrl || bottle.wine?.primaryLabelImageUrl || ''}
+                    alt={`${bottle.wine?.name || 'Wine'} label`}
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                  />
+                ) : (
+                  <div className="flex items-center justify-center h-full">
+                    <Wine className={`h-16 w-16 ${bottle.wine ? getWineTypeColor(bottle.wine.wineType) : 'text-gray-400'}`} />
+                  </div>
+                )}
               </div>
 
-              <h3 className="font-semibold text-lg mb-1">
-                {bottle.wine?.name || 'Unknown Wine'}
-              </h3>
-              <p className="text-sm text-muted-foreground mb-3">
-                {bottle.wine?.producerName}
-                {bottle.wine?.vintage && ` • ${bottle.wine.vintage}`}
-              </p>
+              <div className="p-6">
+                <div className="flex justify-between items-start mb-4">
+                  <Wine className={`h-6 w-6 ${bottle.wine ? getWineTypeColor(bottle.wine.wineType) : 'text-gray-400'}`} />
+                  {getStatusBadge(bottle.status)}
+                </div>
+
+                <h3 className="font-semibold text-lg mb-1">
+                  {bottle.wine?.name || 'Unknown Wine'}
+                </h3>
+                <p className="text-sm text-muted-foreground mb-3">
+                  {bottle.wine?.producerName}
+                  {bottle.wine?.vintage && ` • ${bottle.wine.vintage}`}
+                </p>
 
               <div className="space-y-2 text-sm">
                 <div className="flex items-center gap-2 text-muted-foreground">
@@ -90,7 +118,14 @@ export function BottleList({ bottles }: { bottles: Bottle[] }) {
                 {bottle.purchasePrice && (
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <DollarSign className="h-4 w-4" />
-                    {bottle.currency} {bottle.purchasePrice}
+                    <span>
+                      {bottle.currency} {(parseFloat(bottle.purchasePrice) * bottle.quantity).toFixed(2)}
+                      {bottle.quantity > 1 && (
+                        <span className="text-xs ml-1">
+                          ({bottle.currency} {parseFloat(bottle.purchasePrice).toFixed(2)}/bottle)
+                        </span>
+                      )}
+                    </span>
                   </div>
                 )}
 
@@ -116,6 +151,7 @@ export function BottleList({ bottles }: { bottles: Bottle[] }) {
                   </div>
                 </div>
               )}
+              </div>
             </Link>
           ))}
         </div>
@@ -125,10 +161,25 @@ export function BottleList({ bottles }: { bottles: Bottle[] }) {
             <Link
               key={bottle.id}
               href={`/bottle/${bottle.id}`}
-              className="block rounded-lg border bg-card p-4 hover:shadow-lg transition-shadow"
+              className="block rounded-lg border bg-card overflow-hidden hover:shadow-lg transition-shadow"
             >
               <div className="flex items-center gap-4">
-                <Wine className={`h-6 w-6 ${bottle.wine ? getWineTypeColor(bottle.wine.wineType) : 'text-gray-400'}`} />
+                {/* Thumbnail */}
+                <div className="relative w-20 h-20 flex-shrink-0 bg-muted">
+                  {bottle.labelImageUrl ? (
+                    <Image
+                      src={bottle.labelImageUrl}
+                      alt={`${bottle.wine?.name || 'Wine'} label`}
+                      fill
+                      className="object-cover"
+                      sizes="80px"
+                    />
+                  ) : (
+                    <div className="flex items-center justify-center h-full">
+                      <Wine className={`h-8 w-8 ${bottle.wine ? getWineTypeColor(bottle.wine.wineType) : 'text-gray-400'}`} />
+                    </div>
+                  )}
+                </div>
 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-3">
@@ -139,8 +190,18 @@ export function BottleList({ bottles }: { bottles: Bottle[] }) {
                   </div>
                   <p className="text-sm text-muted-foreground">
                     {bottle.wine?.region}, {bottle.wine?.country}
-                    {bottle.purchasePrice && ` • ${bottle.currency} ${bottle.purchasePrice}`}
-                    {bottle.quantity > 0 && ` • ${bottle.quantity} bottles`}
+                    {bottle.purchasePrice && (
+                      <>
+                        {' • '}
+                        {bottle.currency} {(parseFloat(bottle.purchasePrice) * bottle.quantity).toFixed(2)}
+                        {bottle.quantity > 1 && (
+                          <span className="text-xs">
+                            {' '}({bottle.currency} {parseFloat(bottle.purchasePrice).toFixed(2)}/bottle)
+                          </span>
+                        )}
+                      </>
+                    )}
+                    {bottle.quantity > 0 && ` • ${bottle.quantity} bottle${bottle.quantity > 1 ? 's' : ''}`}
                   </p>
                 </div>
 

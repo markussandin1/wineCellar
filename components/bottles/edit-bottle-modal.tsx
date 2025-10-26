@@ -2,8 +2,9 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { updateBottle } from '@/app/actions/bottle';
-import { X } from 'lucide-react';
+import { X, Upload, Trash2 } from 'lucide-react';
 
 type Bottle = {
   id: string;
@@ -16,7 +17,15 @@ type Bottle = {
   personalNotes: string | null;
   rating: number | null;
   tags: string[];
+  labelImageUrl: string | null;
+  status?: string;
 };
+
+const STATUS_OPTIONS = [
+  { value: 'in_cellar', label: 'In cellar' },
+  { value: 'consumed', label: 'Consumed' },
+  { value: 'other', label: 'Watch list' },
+];
 
 export function EditBottleModal({
   bottle,
@@ -28,6 +37,39 @@ export function EditBottleModal({
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [currentImageUrl, setCurrentImageUrl] = useState<string | null>(bottle.labelImageUrl);
+
+  function handleImageSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      setError('Please select an image file');
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      setError('Image must be less than 10MB');
+      return;
+    }
+
+    setSelectedImage(file);
+    setError(null);
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setImagePreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function handleRemoveImage() {
+    setSelectedImage(null);
+    setImagePreview(null);
+    setCurrentImageUrl(null);
+  }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -36,19 +78,40 @@ export function EditBottleModal({
 
     const formData = new FormData(e.currentTarget);
 
-    const data = {
-      id: bottle.id,
-      quantity: formData.get('quantity') ? Number(formData.get('quantity')) : undefined,
-      purchasePrice: formData.get('purchasePrice') ? Number(formData.get('purchasePrice')) : undefined,
-      currency: formData.get('currency') as string || undefined,
-      purchaseDate: formData.get('purchaseDate') as string || undefined,
-      purchaseLocation: formData.get('purchaseLocation') as string || undefined,
-      storageLocation: formData.get('storageLocation') as string || undefined,
-      personalNotes: formData.get('personalNotes') as string || undefined,
-      rating: formData.get('rating') ? Number(formData.get('rating')) : undefined,
-    };
-
     try {
+      // Upload new image if selected
+      let imageUrl = currentImageUrl;
+      if (selectedImage) {
+        const imageFormData = new FormData();
+        imageFormData.append('image', selectedImage);
+
+        const uploadResponse = await fetch('/api/upload-label', {
+          method: 'POST',
+          body: imageFormData,
+        });
+
+        if (!uploadResponse.ok) {
+          throw new Error('Failed to upload image');
+        }
+
+        const uploadResult = await uploadResponse.json();
+        imageUrl = uploadResult.imageUrl;
+      }
+
+      const data = {
+        id: bottle.id,
+        quantity: formData.get('quantity') ? Number(formData.get('quantity')) : undefined,
+        purchasePrice: formData.get('purchasePrice') ? Number(formData.get('purchasePrice')) : undefined,
+        currency: formData.get('currency') as string || undefined,
+        purchaseDate: formData.get('purchaseDate') as string || undefined,
+        purchaseLocation: formData.get('purchaseLocation') as string || undefined,
+        storageLocation: formData.get('storageLocation') as string || undefined,
+        personalNotes: formData.get('personalNotes') as string || undefined,
+        rating: formData.get('rating') ? Number(formData.get('rating')) : undefined,
+        labelImageUrl: imageUrl || undefined,
+        status: (formData.get('status') as string) || undefined,
+      };
+
       await updateBottle(data);
       router.refresh();
       onClose();
@@ -74,6 +137,50 @@ export function EditBottleModal({
               {error}
             </div>
           )}
+
+          {/* Label Image Upload */}
+          <div className="space-y-3">
+            <label className="block text-sm font-medium">Label Image</label>
+
+            {(currentImageUrl || imagePreview) && (
+              <div className="relative aspect-video w-full max-w-md overflow-hidden rounded-lg border bg-muted">
+                <Image
+                  src={imagePreview || currentImageUrl || ''}
+                  alt="Bottle label"
+                  fill
+                  className="object-contain"
+                />
+                <button
+                  type="button"
+                  onClick={handleRemoveImage}
+                  className="absolute top-2 right-2 rounded-full bg-destructive p-2 text-destructive-foreground hover:bg-destructive/90"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+            )}
+
+            {!currentImageUrl && !imagePreview && (
+              <div className="text-sm text-muted-foreground">No image uploaded</div>
+            )}
+
+            <div>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleImageSelect}
+                className="hidden"
+                id="label-image-upload"
+              />
+              <label
+                htmlFor="label-image-upload"
+                className="inline-flex cursor-pointer items-center gap-2 rounded-md border bg-background px-4 py-2 text-sm font-medium hover:bg-accent"
+              >
+                <Upload className="h-4 w-4" />
+                {currentImageUrl || imagePreview ? 'Change Image' : 'Upload Image'}
+              </label>
+            </div>
+          </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
@@ -107,14 +214,35 @@ export function EditBottleModal({
                 <option value="4">4 stars</option>
                 <option value="5">5 stars</option>
               </select>
-            </div>
           </div>
+        </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label htmlFor="purchasePrice" className="block text-sm font-medium mb-2">
-                Purchase Price
-              </label>
+        <div>
+          <label htmlFor="status" className="block text-sm font-medium mb-2">
+            Status
+          </label>
+          <select
+            id="status"
+            name="status"
+            defaultValue={bottle.status || 'in_cellar'}
+            className="w-full rounded-md border bg-background px-3 py-2"
+          >
+            {STATUS_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+          <p className="mt-2 text-xs text-muted-foreground">
+            Use “Watch list” for bottles you want to track without holding inventory.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label htmlFor="purchasePrice" className="block text-sm font-medium mb-2">
+              Purchase Price
+            </label>
               <input
                 id="purchasePrice"
                 name="purchasePrice"

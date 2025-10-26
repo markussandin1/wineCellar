@@ -1,0 +1,198 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { auth } from '@/auth';
+import { prisma } from '@/lib/prisma';
+import { uploadLabelImage } from '@/lib/supabase';
+import OpenAI from 'openai';
+
+const openai = new OpenAI({
+  apiKey: process.env.OpenAI_API_Key,
+});
+
+// Helper function to calculate string similarity (simple Levenshtein distance)
+function similarity(s1: string, s2: string): number {
+  const longer = s1.length > s2.length ? s1 : s2;
+  const shorter = s1.length > s2.length ? s2 : s1;
+
+  if (longer.length === 0) return 1.0;
+
+  const editDistance = levenshteinDistance(longer.toLowerCase(), shorter.toLowerCase());
+  return (longer.length - editDistance) / longer.length;
+}
+
+function levenshteinDistance(s1: string, s2: string): number {
+  const costs: number[] = [];
+  for (let i = 0; i <= s1.length; i++) {
+    let lastValue = i;
+    for (let j = 0; j <= s2.length; j++) {
+      if (i === 0) {
+        costs[j] = j;
+      } else if (j > 0) {
+        let newValue = costs[j - 1];
+        if (s1.charAt(i - 1) !== s2.charAt(j - 1)) {
+          newValue = Math.min(Math.min(newValue, lastValue), costs[j]) + 1;
+        }
+        costs[j - 1] = lastValue;
+        lastValue = newValue;
+      }
+    }
+    if (i > 0) costs[s2.length] = lastValue;
+  }
+  return costs[s2.length];
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const formData = await request.formData();
+    const image = formData.get('image') as File;
+
+    if (!image) {
+      return NextResponse.json({ error: 'No image provided' }, { status: 400 });
+    }
+
+    // Convert image to base64 for OpenAI
+    const bytes = await image.arrayBuffer();
+    const buffer = Buffer.from(bytes);
+    const base64Image = buffer.toString('base64');
+
+    // Upload image to Supabase Storage
+    let imageUrl: string | null = null;
+    try {
+      imageUrl = await uploadLabelImage(buffer, session.user.id, image.name);
+      console.log('Image uploaded to:', imageUrl);
+    } catch (uploadError) {
+      console.error('Failed to upload image:', uploadError);
+      // Continue even if upload fails - we can still extract data
+    }
+
+    // Step 1: Extract basic information with OpenAI Vision
+    console.log('Extracting basic wine information from label...');
+    const visionResponse = await openai.chat.completions.create({
+      model: 'gpt-4o',
+      messages: [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'text',
+              text: `Analyze this wine label and extract the following information in JSON format:
+{
+  "wineName": "the wine name (e.g., 'Barolo', 'Chardonnay')",
+  "producerName": "the producer/winery name",
+  "vintage": "the year (as a number, or null if not visible or NV)",
+  "wineType": "one of: red, white, rose, sparkling, dessert, fortified (or null if uncertain)",
+  "country": "the country (or null if not visible)",
+  "region": "the region (or null if not visible)",
+  "subRegion": "the sub-region/appellation (or null if not visible)",
+  "primaryGrape": "the primary grape variety (or null if not visible)",
+  "confidence": "your confidence level as a decimal 0-1"
+}
+
+Only return the JSON object, nothing else. Be as accurate as possible.`,
+            },
+            {
+              type: 'image_url',
+              image_url: {
+                url: `data:image/jpeg;base64,${base64Image}`,
+              },
+            },
+          ],
+        },
+      ],
+      max_tokens: 500,
+    });
+
+    const extractedText = visionResponse.choices[0]?.message?.content;
+    if (!extractedText) {
+      throw new Error('Failed to extract data from label');
+    }
+
+    // Clean up the response - remove markdown code blocks if present
+    let cleanedText = extractedText.trim();
+    if (cleanedText.startsWith('```json')) {
+      cleanedText = cleanedText.slice(7); // Remove ```json
+    } else if (cleanedText.startsWith('```')) {
+      cleanedText = cleanedText.slice(3); // Remove ```
+    }
+    if (cleanedText.endsWith('```')) {
+      cleanedText = cleanedText.slice(0, -3); // Remove trailing ```
+    }
+    cleanedText = cleanedText.trim();
+
+    // Parse the JSON response
+    const extracted = JSON.parse(cleanedText);
+
+    // Step 2: Search for existing wine in database
+    console.log('Searching for existing wine in database...');
+    const existingWines = await prisma.wine.findMany({
+      where: {
+        producerName: {
+          contains: extracted.producerName,
+          mode: 'insensitive',
+        },
+      },
+      take: 10,
+    });
+
+    // Find best match using similarity scoring
+    let bestMatch = null;
+    let bestScore = 0;
+
+    for (const wine of existingWines) {
+      const nameScore = similarity(wine.name, extracted.wineName);
+      const producerScore = similarity(wine.producerName, extracted.producerName);
+      const vintageMatch = !extracted.vintage || wine.vintage === extracted.vintage;
+
+      const totalScore = (nameScore + producerScore) / 2;
+
+      // If we have a good match (>85% similarity) and vintage matches
+      if (totalScore > 0.85 && vintageMatch && totalScore > bestScore) {
+        bestMatch = wine;
+        bestScore = totalScore;
+      }
+    }
+
+    if (bestMatch) {
+      console.log(`Found existing wine: ${bestMatch.name} (${bestScore * 100}% match)`);
+
+      // Return existing wine data
+      return NextResponse.json({
+        wineName: bestMatch.name,
+        producerName: bestMatch.producerName,
+        vintage: bestMatch.vintage,
+        wineType: bestMatch.wineType,
+        country: bestMatch.country,
+        region: bestMatch.region,
+        subRegion: bestMatch.subRegion,
+        primaryGrape: bestMatch.primaryGrape,
+        confidence: bestScore,
+        existingWineId: bestMatch.id,
+        imageUrl, // Include uploaded image URL
+        // Include additional wine data if available
+        description: bestMatch.description,
+        tastingNotes: bestMatch.tastingNotes,
+        aiGeneratedSummary: bestMatch.aiGeneratedSummary,
+      });
+    }
+
+    console.log('No existing wine found, returning extracted data');
+
+    // No match found - return extracted data
+    // In a future enhancement, we could call OpenAI again here for detailed info
+    return NextResponse.json({
+      ...extracted,
+      existingWineId: null,
+      imageUrl, // Include uploaded image URL
+    });
+  } catch (error: any) {
+    console.error('Label scanning error:', error);
+    return NextResponse.json(
+      { error: error.message || 'Failed to scan label' },
+      { status: 500 }
+    );
+  }
+}

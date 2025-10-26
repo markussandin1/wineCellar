@@ -164,6 +164,7 @@ model Wine {
   tastingNotes         String?  @map("tasting_notes")
   externalIds          Json?    @map("external_ids")
   aiGeneratedSummary   String?  @map("ai_generated_summary")
+  primaryLabelImageUrl String?  @map("primary_label_image_url")
 
   // Metadata
   createdAt    DateTime @default(now()) @map("created_at")
@@ -201,6 +202,7 @@ model Bottle {
   personalNotes    String?
   rating           Int?
   tags             String[]
+  labelImageUrl    String?  @map("label_image_url") // Primary label image
 
   // Metadata
   createdAt        DateTime @default(now()) @map("created_at")

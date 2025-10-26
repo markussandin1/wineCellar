@@ -9,6 +9,9 @@ Ease of use: Zero-friction input via AI label scanning, not spreadsheets
 Core Philosophy: AI is invisible infrastructure, not a chatbot. The app should feel magical but simple.
 
 Technical Stack
+
+ITS IMPORTANT TO KEEP THE FILE SIZE AND FUNCTIONS MANAGEBLE. BETTER TO SPLIT A FUNCTION OR COMPONENT IN TWO IF ITS GET TO LARGE.
+
 Frontend
 
 Framework: Next.js 14+ (App Router)

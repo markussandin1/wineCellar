@@ -3,6 +3,7 @@ import { z } from 'zod';
 export const bottleSchema = z.object({
   // Wine Information (can be existing wine or new)
   wineId: z.string().uuid().optional(),
+  existingWineId: z.string().uuid().optional(), // From autocomplete selection
   wineName: z.string().min(1, 'Wine name is required'),
   vintage: z.coerce.number().int().min(1900).max(new Date().getFullYear() + 5).nullable().optional(),
   producerName: z.string().min(1, 'Producer name is required'),
@@ -13,7 +14,7 @@ export const bottleSchema = z.object({
   primaryGrape: z.string().optional(),
 
   // Bottle-specific information
-  quantity: z.coerce.number().int().min(1).default(1),
+  quantity: z.coerce.number().int().min(0).default(1),
   purchasePrice: z.coerce.number().positive().optional(),
   currency: z.string().default('USD'),
   purchaseDate: z.string().optional(), // ISO date string
@@ -22,6 +23,7 @@ export const bottleSchema = z.object({
   personalNotes: z.string().optional(),
   tags: z.array(z.string()).default([]),
   acquisitionMethod: z.enum(['purchased', 'gift', 'trade', 'other']).default('purchased'),
+  status: z.enum(['in_cellar', 'consumed', 'gifted', 'other']).default('in_cellar'),
 });
 
 export const consumeBottleSchema = z.object({
@@ -46,6 +48,8 @@ export const editBottleSchema = z.object({
   personalNotes: z.string().optional(),
   tags: z.array(z.string()).optional(),
   rating: z.coerce.number().int().min(1).max(5).optional(),
+  labelImageUrl: z.string().url().optional(),
+  status: z.enum(['in_cellar', 'consumed', 'gifted', 'other']).optional(),
 });
 
 export type BottleFormData = z.infer<typeof bottleSchema>;

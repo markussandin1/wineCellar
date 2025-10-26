@@ -59,11 +59,21 @@ export async function getDashboardStats() {
     return acc;
   }, {} as Record<string, number>);
 
+  // Convert Decimal to string for recent bottles
+  const serializedRecentBottles = recentBottles.map(bottle => ({
+    ...bottle,
+    purchasePrice: bottle.purchasePrice ? bottle.purchasePrice.toString() : null,
+    wine: bottle.wine ? {
+      ...bottle.wine,
+      alcoholPercentage: bottle.wine.alcoholPercentage ? bottle.wine.alcoholPercentage.toString() : null,
+    } : null,
+  }));
+
   return {
     totalBottles,
     totalValue,
     currency: bottles.find((b) => b.currency)?.currency || 'USD',
-    recentBottles,
+    recentBottles: serializedRecentBottles,
     byType,
     byRegion,
   };

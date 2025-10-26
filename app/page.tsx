@@ -18,10 +18,10 @@ export default async function Home() {
         </div>
         <h1 className="text-5xl font-bold mb-4">Wine Cellar</h1>
         <p className="text-xl text-muted-foreground mb-8">
-          AI-Powered Wine Collection Manager
+          Wine Collection Manager
         </p>
         <p className="text-muted-foreground mb-8">
-          Track your wine collection effortlessly with AI label scanning and smart insights.
+          Track your wine collection effortlessly with label scanning and smart insights.
           Never forget what you own, when to drink it, or what you loved.
         </p>
         <div className="flex gap-4 justify-center">
@@ -42,7 +42,7 @@ export default async function Home() {
           <div className="rounded-lg border bg-card p-6">
             <h3 className="font-semibold mb-2">AI Label Scanning</h3>
             <p className="text-sm text-muted-foreground">
-              Snap a photo of any wine label and let AI extract all the details automatically
+              Snap a photo of any wine label and extract all the details automatically
             </p>
           </div>
           <div className="rounded-lg border bg-card p-6">

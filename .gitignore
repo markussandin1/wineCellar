@@ -23,6 +23,11 @@ next-env.d.ts
 .env.development.local
 .env.test.local
 .env.production.local
+.env.production.template
+
+# Deployment docs with secrets
+GITHUB-SECRETS-SETUP.md
+QUICK-DEPLOY.md
 
 # Debug
 npm-debug.log*

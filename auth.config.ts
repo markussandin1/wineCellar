@@ -3,7 +3,6 @@ import type { NextAuthConfig } from 'next-auth';
 export const authConfig = {
   pages: {
     signIn: '/login',
-    signOut: '/logout',
   },
   callbacks: {
     authorized({ auth, request: { nextUrl } }) {
@@ -19,6 +18,20 @@ export const authConfig = {
         return true;
       }
       return true;
+    },
+    async jwt({ token, user }) {
+      // Add user id to token on sign in
+      if (user) {
+        token.id = user.id;
+      }
+      return token;
+    },
+    async session({ session, token }) {
+      // Add user id to session from token
+      if (session.user && token.id) {
+        session.user.id = token.id as string;
+      }
+      return session;
     },
   },
   providers: [], // Add providers with an empty array for now

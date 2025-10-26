@@ -1,0 +1,31 @@
+{
+  "mcpServers": {
+    "supabase-winecellar": {
+      "type": "http",
+      "url": "https://mcp.supabase.com/mcp",
+      "params": {
+        "project_ref": "pktiwlfxgfkkqxzhtaxe",
+        "features": "database,storage,docs"
+      }
+    },
+    "vercel": {
+      "type": "http",
+      "url": "https://mcp.vercel.com/mcp"
+    },
+    "github": {
+      "type": "http",
+      "url": "https://api.githubcopilot.com/mcp/",
+      "headers": {
+        "Authorization": "Bearer ${input:github_mcp_pat}"
+      }
+    }
+  },
+  "inputs": [
+    {
+      "type": "promptString",
+      "id": "github_mcp_pat",
+      "description": "GitHub Personal Access Token",
+      "password": true
+    }
+  ]
+}
