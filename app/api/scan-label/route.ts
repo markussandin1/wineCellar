@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { uploadLabelImage } from '@/lib/supabase';
 import OpenAI from 'openai';
+import { labelScanConfig } from '@/config/ai';
 
 const openai = new OpenAI({
   apiKey: process.env.OpenAI_API_Key,
@@ -73,41 +74,14 @@ export async function POST(request: NextRequest) {
     // Step 1: Extract basic information with OpenAI Vision
     console.log('Extracting basic wine information from label...');
     const visionResponse = await openai.chat.completions.create({
-      model: 'gpt-4o',
+      model: labelScanConfig.model,
       messages: [
         {
           role: 'user',
           content: [
             {
               type: 'text',
-              text: `Analyze this wine label and extract the following information in JSON format:
-{
-  "wineName": "the wine name (e.g., 'Barolo', 'Chardonnay')",
-  "producerName": "the producer/winery name",
-  "vintage": "the year (as a number, or null if not visible or NV)",
-  "wineType": "one of: red, white, rose, sparkling, dessert, fortified (or null if uncertain)",
-  "country": "the country (or null if not visible)",
-  "region": "the region (or null if not visible)",
-  "subRegion": "the sub-region/appellation (or null if not visible)",
-  "primaryGrape": "the primary grape variety (or null if not visible)",
-  "estimatedPrice": {
-    "amount": "estimated retail price as a number (or null if you cannot estimate)",
-    "currency": "the currency code (SEK, USD, EUR, etc.) based on the country/region",
-    "confidence": "your confidence in this price estimate as a decimal 0-1",
-    "reasoning": "brief explanation of how you estimated the price"
-  },
-  "confidence": "your overall confidence level as a decimal 0-1"
-}
-
-For price estimation, consider:
-- Producer reputation and classification (e.g., Grand Cru, Premier Cru, DOC, DOCG)
-- Region prestige (e.g., Bordeaux, Burgundy, Barolo, Napa)
-- Vintage quality if known
-- Typical market prices for similar wines
-- Any visible awards or ratings
-- Default to the local currency of the wine's origin country
-
-Only return the JSON object, nothing else. Be as accurate as possible.`,
+              text: labelScanConfig.prompt,
             },
             {
               type: 'image_url',
@@ -118,7 +92,7 @@ Only return the JSON object, nothing else. Be as accurate as possible.`,
           ],
         },
       ],
-      max_tokens: 700,
+      max_tokens: labelScanConfig.maxTokens,
     });
 
     const extractedText = visionResponse.choices[0]?.message?.content;
