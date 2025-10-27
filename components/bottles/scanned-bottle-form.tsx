@@ -45,11 +45,12 @@ interface ScannedBottleFormProps {
     };
   };
   onBack: () => void;
+  onSuccess?: () => void;
   initialPlacement?: 'cellar' | 'watchlist';
   userCurrency: string;
 }
 
-export function ScannedBottleForm({ extractedData, onBack, initialPlacement = 'cellar', userCurrency }: ScannedBottleFormProps) {
+export function ScannedBottleForm({ extractedData, onBack, onSuccess, initialPlacement = 'cellar', userCurrency }: ScannedBottleFormProps) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -125,6 +126,13 @@ export function ScannedBottleForm({ extractedData, onBack, initialPlacement = 'c
     try {
       const result = await createBottleFromScan(formData);
       if (result.success) {
+        // If onSuccess callback is provided, call it instead of navigating
+        if (onSuccess) {
+          onSuccess();
+          return;
+        }
+
+        // Otherwise, navigate to cellar (default behavior)
         router.push('/cellar');
         router.refresh();
         return;

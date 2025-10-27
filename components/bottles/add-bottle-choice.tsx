@@ -1,11 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { Camera, Edit3 } from 'lucide-react';
+import { Camera, Edit3, Layers } from 'lucide-react';
 import { BottleForm } from './bottle-form';
 import { LabelScanner } from './label-scanner';
+import { BatchLabelScanner } from './batch-label-scanner';
 
-type Mode = 'choice' | 'scan' | 'manual';
+type Mode = 'choice' | 'scan' | 'batch' | 'manual';
 type Placement = 'cellar' | 'watchlist';
 
 interface AddBottleChoiceProps {
@@ -26,6 +27,20 @@ export function AddBottleChoice({ userCurrency }: AddBottleChoiceProps) {
           ← Back to options
         </button>
         <LabelScanner initialPlacement={placement} userCurrency={userCurrency} />
+      </div>
+    );
+  }
+
+  if (mode === 'batch') {
+    return (
+      <div>
+        <button
+          onClick={() => setMode('choice')}
+          className="mb-4 text-sm text-muted-foreground hover:text-foreground"
+        >
+          ← Back to options
+        </button>
+        <BatchLabelScanner initialPlacement={placement} userCurrency={userCurrency} />
       </div>
     );
   }
@@ -83,25 +98,47 @@ export function AddBottleChoice({ userCurrency }: AddBottleChoiceProps) {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Scan Label Option */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Scan Single Label Option */}
         <button
           onClick={() => setMode('scan')}
-          className="group relative overflow-hidden rounded-lg border-2 border-border bg-card p-8 text-center transition-all hover:border-primary hover:bg-accent"
+          className="group relative overflow-hidden rounded-lg border-2 border-border bg-card p-6 text-center transition-all hover:border-primary hover:bg-accent"
         >
-          <div className="flex flex-col items-center space-y-4">
-            <div className="rounded-full bg-primary/10 p-4 transition-colors group-hover:bg-primary/20">
-              <Camera className="h-8 w-8 text-primary" />
+          <div className="flex flex-col items-center space-y-3">
+            <div className="rounded-full bg-primary/10 p-3 transition-colors group-hover:bg-primary/20">
+              <Camera className="h-6 w-6 text-primary" />
             </div>
             <div>
-              <h3 className="text-lg font-semibold">Scan Label</h3>
-              <p className="mt-2 text-sm text-muted-foreground">
-                Take a photo of the wine label and we will extract the details
+              <h3 className="text-base font-semibold">Scan Label</h3>
+              <p className="mt-1 text-xs text-muted-foreground">
+                One photo at a time
               </p>
             </div>
-            <div className="mt-4 inline-flex items-center text-sm font-medium text-primary">
+            <div className="mt-2 inline-flex items-center text-xs font-medium text-primary">
               Quick & Easy
-              <span className="ml-2">→</span>
+              <span className="ml-1">→</span>
+            </div>
+          </div>
+        </button>
+
+        {/* Batch Scan Option */}
+        <button
+          onClick={() => setMode('batch')}
+          className="group relative overflow-hidden rounded-lg border-2 border-border bg-card p-6 text-center transition-all hover:border-primary hover:bg-accent"
+        >
+          <div className="flex flex-col items-center space-y-3">
+            <div className="rounded-full bg-primary/10 p-3 transition-colors group-hover:bg-primary/20">
+              <Layers className="h-6 w-6 text-primary" />
+            </div>
+            <div>
+              <h3 className="text-base font-semibold">Batch Upload</h3>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Up to 20 bottles at once
+              </p>
+            </div>
+            <div className="mt-2 inline-flex items-center text-xs font-medium text-primary">
+              Power User
+              <span className="ml-1">→</span>
             </div>
           </div>
         </button>
@@ -109,29 +146,29 @@ export function AddBottleChoice({ userCurrency }: AddBottleChoiceProps) {
         {/* Manual Entry Option */}
         <button
           onClick={() => setMode('manual')}
-          className="group relative overflow-hidden rounded-lg border-2 border-border bg-card p-8 text-center transition-all hover:border-primary hover:bg-accent"
+          className="group relative overflow-hidden rounded-lg border-2 border-border bg-card p-6 text-center transition-all hover:border-primary hover:bg-accent"
         >
-          <div className="flex flex-col items-center space-y-4">
-            <div className="rounded-full bg-primary/10 p-4 transition-colors group-hover:bg-primary/20">
-              <Edit3 className="h-8 w-8 text-primary" />
+          <div className="flex flex-col items-center space-y-3">
+            <div className="rounded-full bg-primary/10 p-3 transition-colors group-hover:bg-primary/20">
+              <Edit3 className="h-6 w-6 text-primary" />
             </div>
             <div>
-              <h3 className="text-lg font-semibold">Enter Manually</h3>
-              <p className="mt-2 text-sm text-muted-foreground">
-                Fill in the wine details yourself with autocomplete
+              <h3 className="text-base font-semibold">Enter Manually</h3>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Type in details yourself
               </p>
             </div>
-            <div className="mt-4 inline-flex items-center text-sm font-medium text-primary">
+            <div className="mt-2 inline-flex items-center text-xs font-medium text-primary">
               Full Control
-              <span className="ml-2">→</span>
+              <span className="ml-1">→</span>
             </div>
           </div>
         </button>
       </div>
 
       <div className="mt-8 rounded-lg bg-muted/50 p-4 text-sm text-muted-foreground">
-        <strong>Tip:</strong> Scanning is faster, but you can always review and edit
-        the extracted information before saving.
+        <strong>Tip:</strong> Use batch upload if you have multiple bottles to add. Each label is processed
+        separately by AI, and you can review them one by one before saving.
       </div>
     </div>
   );
