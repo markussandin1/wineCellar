@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/auth';
+import { createClient } from '@/lib/supabase/server';
 import { prisma } from '@/lib/prisma';
 import { uploadLabelImage } from '@/lib/supabase';
 import OpenAI from 'openai';
@@ -42,8 +42,10 @@ function levenshteinDistance(s1: string, s2: string): number {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -62,7 +64,7 @@ export async function POST(request: NextRequest) {
     // Upload image to Supabase Storage
     let imageUrl: string | null = null;
     try {
-      imageUrl = await uploadLabelImage(buffer, session.user.id, image.name);
+      imageUrl = await uploadLabelImage(buffer, user.id, image.name);
       console.log('Image uploaded to:', imageUrl);
     } catch (uploadError) {
       console.error('Failed to upload image:', uploadError);

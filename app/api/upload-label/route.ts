@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/auth';
+import { createClient } from '@/lib/supabase/server';
 import { uploadLabelImage } from '@/lib/supabase';
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -28,7 +30,7 @@ export async function POST(request: NextRequest) {
 
     // Upload image to Supabase
     const buffer = Buffer.from(await image.arrayBuffer());
-    const imageUrl = await uploadLabelImage(buffer, session.user.id, image.name);
+    const imageUrl = await uploadLabelImage(buffer, user.id, image.name);
 
     return NextResponse.json({
       success: true,
