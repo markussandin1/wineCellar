@@ -6,6 +6,7 @@ import { findBestWineMatch } from '@/lib/utils/wine-matching';
 import { generateWineDescription } from '@/lib/ai/wine-description';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
+import { normalizeBottleRecord } from '@/lib/utils/supabase-normalize';
 
 export async function createBottle(formData: FormData) {
   const supabase = await createClient();
@@ -58,7 +59,7 @@ export async function createBottle(formData: FormData) {
 
       wineRecord = wines[0];
 
-      if (labelImageUrl && !wineRecord.primaryLabelImageUrl) {
+      if (labelImageUrl && !wineRecord.primary_label_image_url) {
         const { data: updatedWines, error: updateError } = await supabase
           .from('wines')
           .update({ primary_label_image_url: labelImageUrl })
@@ -111,7 +112,7 @@ export async function createBottle(formData: FormData) {
 
         wineRecord = wines[0];
 
-        if (labelImageUrl && !wineRecord.primaryLabelImageUrl) {
+      if (labelImageUrl && !wineRecord.primary_label_image_url) {
           const { data: updatedWines, error: updateError } = await supabase
             .from('wines')
             .update({ primary_label_image_url: labelImageUrl })
@@ -167,7 +168,7 @@ export async function createBottle(formData: FormData) {
         purchase_date: validatedData.purchaseDate ? new Date(validatedData.purchaseDate).toISOString() : null,
         purchase_location: validatedData.purchaseLocation || null,
         storage_location: validatedData.storageLocation || null,
-        personalNotes: validatedData.personalNotes || null,
+        personal_notes: validatedData.personalNotes || null,
         label_image_url: labelImageUrl || null,
         tags: validatedData.tags,
         acquisition_method: validatedData.acquisitionMethod,
@@ -202,7 +203,7 @@ export async function createBottle(formData: FormData) {
           .from('wines')
           .update({
             description: generated.description,
-            aiGeneratedSummary: generated.summary,
+            ai_generated_summary: generated.summary,
           })
           .eq('id', wineRecord.id);
 
@@ -281,16 +282,7 @@ export async function getBottles(filters?: {
     throw new Error('Failed to fetch bottles');
   }
 
-  // Convert Decimal to string for all bottles
-  return (bottles || []).map(bottle => ({
-    ...bottle,
-    purchase_price: bottle.purchasePrice ? bottle.purchasePrice.toString() : null,
-    label_image_url: bottle.labelImageUrl,
-    wine: bottle.wine ? {
-      ...bottle.wine,
-      alcoholPercentage: bottle.wine.alcoholPercentage ? bottle.wine.alcoholPercentage.toString() : null,
-    } : null,
-  }));
+  return (bottles || []).map((bottle) => normalizeBottleRecord(bottle));
 }
 
 export async function getBottle(id: string) {
@@ -319,22 +311,15 @@ export async function getBottle(id: string) {
   const bottle = bottles?.[0];
   if (!bottle) return null;
 
-  // Sort consumption logs by consumed date (desc)
-  if (bottle.consumptionLogs) {
-    bottle.consumptionLogs.sort((a: any, b: any) =>
+  const normalizedBottle = normalizeBottleRecord(bottle);
+
+  if (Array.isArray(normalizedBottle.consumptionLogs)) {
+    normalizedBottle.consumptionLogs.sort((a: any, b: any) =>
       new Date(b.consumedDate).getTime() - new Date(a.consumedDate).getTime()
     );
   }
 
-  // Convert Decimal to string
-  return {
-    ...bottle,
-    purchase_price: bottle.purchasePrice ? bottle.purchasePrice.toString() : null,
-    wine: bottle.wine ? {
-      ...bottle.wine,
-      alcoholPercentage: bottle.wine.alcoholPercentage ? bottle.wine.alcoholPercentage.toString() : null,
-    } : null,
-  };
+  return normalizedBottle;
 }
 
 export async function updateBottle(data: any) {
@@ -360,15 +345,15 @@ export async function updateBottle(data: any) {
   const updateData: any = {};
 
   if (validatedData.quantity !== undefined) updateData.quantity = validatedData.quantity;
-  if (validatedData.purchasePrice !== undefined) updateData.purchasePrice = String(validatedData.purchasePrice);
+  if (validatedData.purchasePrice !== undefined) updateData.purchase_price = String(validatedData.purchasePrice);
   if (validatedData.currency) updateData.currency = validatedData.currency;
-  if (validatedData.purchaseDate) updateData.purchaseDate = new Date(validatedData.purchaseDate).toISOString();
-  if (validatedData.purchaseLocation !== undefined) updateData.purchaseLocation = validatedData.purchaseLocation;
-  if (validatedData.storageLocation !== undefined) updateData.storageLocation = validatedData.storageLocation;
-  if (validatedData.personalNotes !== undefined) updateData.personalNotes = validatedData.personalNotes;
+  if (validatedData.purchaseDate) updateData.purchase_date = new Date(validatedData.purchaseDate).toISOString();
+  if (validatedData.purchaseLocation !== undefined) updateData.purchase_location = validatedData.purchaseLocation;
+  if (validatedData.storageLocation !== undefined) updateData.storage_location = validatedData.storageLocation;
+  if (validatedData.personalNotes !== undefined) updateData.personal_notes = validatedData.personalNotes;
   if (validatedData.tags) updateData.tags = validatedData.tags;
   if (validatedData.rating !== undefined) updateData.rating = validatedData.rating;
-  if (validatedData.labelImageUrl !== undefined) updateData.labelImageUrl = validatedData.labelImageUrl;
+  if (validatedData.labelImageUrl !== undefined) updateData.label_image_url = validatedData.labelImageUrl;
   if (validatedData.status) updateData.status = validatedData.status;
 
   const { data: updatedBottles, error: updateError } = await supabase
@@ -385,22 +370,12 @@ export async function updateBottle(data: any) {
     throw new Error('Failed to update bottle');
   }
 
-  const bottle = updatedBottles[0];
+  const bottle = normalizeBottleRecord(updatedBottles[0]);
 
   revalidatePath('/cellar');
   revalidatePath(`/bottle/${validatedData.id}`);
 
-  // Convert Decimal to string
-  const serializedBottle = {
-    ...bottle,
-    purchase_price: bottle.purchasePrice ? bottle.purchasePrice.toString() : null,
-    wine: bottle.wine ? {
-      ...bottle.wine,
-      alcoholPercentage: bottle.wine.alcoholPercentage ? bottle.wine.alcoholPercentage.toString() : null,
-    } : null,
-  };
-
-  return { success: true, bottle: serializedBottle };
+  return { success: true, bottle };
 }
 
 export async function deleteBottle(id: string) {
@@ -460,7 +435,7 @@ export async function consumeBottle(data: any) {
     throw new Error('Bottle not found');
   }
 
-  const bottle = bottles[0];
+  const bottle = normalizeBottleRecord(bottles[0]);
 
   // Create consumption log
   const { error: logError } = await supabase
@@ -560,7 +535,7 @@ export async function createBottleFromScan(formData: FormData) {
 
       wineRecord = wines[0];
 
-      if (imageUrl && !wineRecord.primaryLabelImageUrl) {
+      if (imageUrl && !wineRecord.primary_label_image_url) {
         const { data: updatedWines, error: updateError } = await supabase
           .from('wines')
           .update({ primary_label_image_url: imageUrl })
@@ -616,7 +591,7 @@ export async function createBottleFromScan(formData: FormData) {
         purchase_date: bottleData.purchaseDate ? new Date(bottleData.purchaseDate).toISOString() : null,
         purchase_location: bottleData.purchaseLocation || null,
         storage_location: bottleData.storageLocation || null,
-        personalNotes: bottleData.personalNotes || null,
+        personal_notes: bottleData.personalNotes || null,
         label_image_url: imageUrl,
         tags: [],
         acquisition_method: bottleData.acquisitionMethod as any,
@@ -651,7 +626,7 @@ export async function createBottleFromScan(formData: FormData) {
           .from('wines')
           .update({
             description: generated.description,
-            aiGeneratedSummary: generated.summary,
+            ai_generated_summary: generated.summary,
           })
           .eq('id', wineRecord.id);
 

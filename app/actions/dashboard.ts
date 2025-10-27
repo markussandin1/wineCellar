@@ -1,6 +1,7 @@
 'use server';
 
 import { createClient } from '@/lib/supabase/server';
+import { normalizeBottleRecord } from '@/lib/utils/supabase-normalize';
 
 export async function getDashboardStats() {
   const supabase = await createClient();
@@ -25,7 +26,7 @@ export async function getDashboardStats() {
     throw new Error('Failed to fetch bottles');
   }
 
-  const bottlesArray = bottles || [];
+  const bottlesArray = (bottles || []).map(normalizeBottleRecord);
 
   // Calculate total bottles (sum of quantities)
   const totalBottles = bottlesArray.reduce((sum, bottle) => sum + bottle.quantity, 0);
@@ -69,14 +70,7 @@ export async function getDashboardStats() {
   }, {} as Record<string, number>);
 
   // Supabase returns data already serialized, no need for Decimal conversion
-  const serializedRecentBottles = (recentBottles || []).map(bottle => ({
-    ...bottle,
-    purchasePrice: bottle.purchasePrice ? bottle.purchasePrice.toString() : null,
-    wine: bottle.wine ? {
-      ...bottle.wine,
-      alcoholPercentage: bottle.wine.alcoholPercentage ? bottle.wine.alcoholPercentage.toString() : null,
-    } : null,
-  }));
+  const serializedRecentBottles = (recentBottles || []).map((bottle) => normalizeBottleRecord(bottle));
 
   return {
     totalBottles,
