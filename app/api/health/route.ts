@@ -9,31 +9,34 @@ export async function GET() {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
 
-    // Test database connection via Supabase REST API
-    const { data, error } = await supabase
-      .from('User')
-      .select('count')
-      .limit(1)
-      .single();
+    // Test Supabase connection by checking auth health
+    const { data: { users }, error } = await supabase.auth.admin.listUsers({
+      page: 1,
+      perPage: 1
+    });
 
-    if (error && error.code !== 'PGRST116') {
-      // PGRST116 = no rows returned, which is OK for health check
+    if (error) {
       throw error;
     }
 
     return NextResponse.json({
       status: 'ok',
       database: 'connected',
-      method: 'Supabase REST API',
+      method: 'Supabase Auth API',
+      userCount: users?.length || 0,
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
     console.error('Health check error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorDetails = error && typeof error === 'object' ? JSON.stringify(error, null, 2) : String(error);
+
     return NextResponse.json(
       {
         status: 'error',
         database: 'disconnected',
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: errorMessage,
+        details: process.env.NODE_ENV === 'development' ? errorDetails : undefined,
         timestamp: new Date().toISOString(),
       },
       { status: 500 }
