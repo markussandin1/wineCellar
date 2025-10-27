@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createBottleFromScan } from '@/app/actions/bottle';
+import { convertCurrency, formatPrice } from '@/lib/utils/currency';
 
 const WINE_TYPES = [
   { value: 'red', label: 'Red' },
@@ -68,6 +69,15 @@ export function ScannedBottleForm({ extractedData, onBack, initialPlacement = 'c
     subRegion: extractedData.subRegion || '',
     primaryGrape: extractedData.primaryGrape || '',
   });
+
+  // Convert price from EUR to user's currency
+  const convertedPrice = extractedData.estimatedPrice?.amount
+    ? convertCurrency(
+        extractedData.estimatedPrice.amount,
+        'EUR',
+        userCurrency
+      )
+    : undefined;
 
   useEffect(() => {
     if (initialPlacement === 'watchlist') {
@@ -372,7 +382,7 @@ export function ScannedBottleForm({ extractedData, onBack, initialPlacement = 'c
           <div>
             <label htmlFor="purchasePrice" className="block text-sm font-medium mb-2">
               Purchase Price (per bottle)
-              {extractedData.estimatedPrice?.amount && (
+              {convertedPrice && (
                 <span className="ml-2 text-xs text-muted-foreground">
                   (estimated)
                 </span>
@@ -384,12 +394,19 @@ export function ScannedBottleForm({ extractedData, onBack, initialPlacement = 'c
               type="number"
               step="0.01"
               min="0"
-              defaultValue={extractedData.estimatedPrice?.amount || ''}
+              defaultValue={convertedPrice || ''}
               className="w-full rounded-md border bg-background px-3 py-2"
             />
-            {extractedData.estimatedPrice?.reasoning && (
+            {extractedData.estimatedPrice?.amount && (
               <p className="text-xs text-muted-foreground mt-1">
-                {extractedData.estimatedPrice.reasoning}
+                {extractedData.estimatedPrice.reasoning && (
+                  <span className="block">{extractedData.estimatedPrice.reasoning}</span>
+                )}
+                <span className="block mt-1">
+                  Original: {formatPrice(extractedData.estimatedPrice.amount, 'EUR')}
+                  {' → '}
+                  Converted: {formatPrice(convertedPrice!, userCurrency)}
+                </span>
               </p>
             )}
           </div>
@@ -409,11 +426,6 @@ export function ScannedBottleForm({ extractedData, onBack, initialPlacement = 'c
               <option value="GBP">GBP</option>
               <option value="SEK">SEK</option>
             </select>
-            {extractedData.estimatedPrice?.currency && extractedData.estimatedPrice.currency !== userCurrency && (
-              <p className="text-xs text-muted-foreground mt-1">
-                Original estimate was in {extractedData.estimatedPrice.currency}
-              </p>
-            )}
           </div>
         </div>
 

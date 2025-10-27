@@ -108,21 +108,22 @@ export const labelScanConfig: LabelScanConfig = {
   "subRegion": "the sub-region/appellation (or null if not visible)",
   "primaryGrape": "the primary grape variety (or null if not visible)",
   "estimatedPrice": {
-    "amount": "estimated retail price as a number (or null if you cannot estimate)",
-    "currency": "the currency code (SEK, USD, EUR, etc.) based on the country/region",
+    "amount": "estimated retail price as a number IN EUROS (or null if you cannot estimate)",
+    "currency": "EUR",
     "confidence": "your confidence in this price estimate as a decimal 0-1",
     "reasoning": "brief explanation of how you estimated the price"
   },
   "confidence": "your overall confidence level as a decimal 0-1"
 }
 
+IMPORTANT: Always estimate the price in EUR (Euros), regardless of the wine's origin country. EUR is the standard currency for wine pricing globally.
+
 For price estimation, consider:
 - Producer reputation and classification (e.g., Grand Cru, Premier Cru, DOC, DOCG)
 - Region prestige (e.g., Bordeaux, Burgundy, Barolo, Napa)
 - Vintage quality if known
-- Typical market prices for similar wines
+- Typical market prices for similar wines in Europe
 - Any visible awards or ratings
-- Default to the local currency of the wine's origin country
 
 Only return the JSON object, nothing else. Be as accurate as possible.`,
 };
