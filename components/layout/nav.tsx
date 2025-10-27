@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
-import { Wine, Home, Grid3x3, LogOut } from 'lucide-react';
+import { Wine, Home, Grid3x3, LogOut, Settings } from 'lucide-react';
 import { logout } from '@/app/actions/auth';
 
 const navItems = [
@@ -16,6 +16,11 @@ const navItems = [
     name: 'Cellar',
     href: '/cellar',
     icon: Wine,
+  },
+  {
+    name: 'Settings',
+    href: '/settings',
+    icon: Settings,
   },
 ];
 
