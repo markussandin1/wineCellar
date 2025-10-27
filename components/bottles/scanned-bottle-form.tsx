@@ -45,9 +45,10 @@ interface ScannedBottleFormProps {
   };
   onBack: () => void;
   initialPlacement?: 'cellar' | 'watchlist';
+  userCurrency: string;
 }
 
-export function ScannedBottleForm({ extractedData, onBack, initialPlacement = 'cellar' }: ScannedBottleFormProps) {
+export function ScannedBottleForm({ extractedData, onBack, initialPlacement = 'cellar', userCurrency }: ScannedBottleFormProps) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -371,9 +372,9 @@ export function ScannedBottleForm({ extractedData, onBack, initialPlacement = 'c
           <div>
             <label htmlFor="purchasePrice" className="block text-sm font-medium mb-2">
               Purchase Price (per bottle)
-              {extractedData.estimatedPrice?.amount && extractedData.estimatedPrice.confidence && (
+              {extractedData.estimatedPrice?.amount && (
                 <span className="ml-2 text-xs text-muted-foreground">
-                  (AI estimated - {Math.round(extractedData.estimatedPrice.confidence * 100)}% confidence)
+                  (estimated)
                 </span>
               )}
             </label>
@@ -400,7 +401,7 @@ export function ScannedBottleForm({ extractedData, onBack, initialPlacement = 'c
             <select
               id="currency"
               name="currency"
-              defaultValue={extractedData.estimatedPrice?.currency || 'SEK'}
+              defaultValue={extractedData.estimatedPrice?.currency || userCurrency}
               className="w-full rounded-md border bg-background px-3 py-2"
             >
               <option value="USD">USD</option>

@@ -24,9 +24,10 @@ interface ExtractedData {
 
 interface LabelScannerProps {
   initialPlacement: 'cellar' | 'watchlist';
+  userCurrency: string;
 }
 
-export function LabelScanner({ initialPlacement }: LabelScannerProps) {
+export function LabelScanner({ initialPlacement, userCurrency }: LabelScannerProps) {
   const router = useRouter();
   const [step, setStep] = useState<ScanStep>('upload');
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
@@ -230,6 +231,7 @@ export function LabelScanner({ initialPlacement }: LabelScannerProps) {
         extractedData={extractedData}
         onBack={handleReset}
         initialPlacement={initialPlacement}
+        userCurrency={userCurrency}
       />
     );
   }

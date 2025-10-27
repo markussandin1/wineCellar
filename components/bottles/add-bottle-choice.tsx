@@ -8,7 +8,11 @@ import { LabelScanner } from './label-scanner';
 type Mode = 'choice' | 'scan' | 'manual';
 type Placement = 'cellar' | 'watchlist';
 
-export function AddBottleChoice() {
+interface AddBottleChoiceProps {
+  userCurrency: string;
+}
+
+export function AddBottleChoice({ userCurrency }: AddBottleChoiceProps) {
   const [mode, setMode] = useState<Mode>('choice');
   const [placement, setPlacement] = useState<Placement>('cellar');
 
@@ -21,7 +25,7 @@ export function AddBottleChoice() {
         >
           ← Back to options
         </button>
-        <LabelScanner initialPlacement={placement} />
+        <LabelScanner initialPlacement={placement} userCurrency={userCurrency} />
       </div>
     );
   }
