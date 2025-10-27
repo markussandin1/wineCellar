@@ -21,8 +21,8 @@ export default function LoginPage() {
 
     try {
       const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+        'https://pktiwlfxgfkkqxzhtaxe.supabase.co',
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBrdGl3bGZ4Z2Zra3F4emh0YXhlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEzOTEwMTEsImV4cCI6MjA3Njk2NzAxMX0.5AV3OaWeLiLliq5GTpbrzWav4Gd_KNaceAyK14BRi4I'
       );
 
       const { data, error: signInError } = await supabase.auth.signInWithPassword({
@@ -31,14 +31,17 @@ export default function LoginPage() {
       });
 
       if (signInError) {
+        console.error('Sign in error:', signInError);
         setError('Invalid email or password');
         setIsLoading(false);
         return;
       }
 
+      console.log('Login successful, redirecting to dashboard...');
       // Redirect to dashboard on success
       router.push('/dashboard');
     } catch (err) {
+      console.error('Unexpected error:', err);
       setError('An unexpected error occurred');
       setIsLoading(false);
     }
@@ -50,8 +53,8 @@ export default function LoginPage() {
 
     try {
       const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+        'https://pktiwlfxgfkkqxzhtaxe.supabase.co',
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBrdGl3bGZ4Z2Zra3F4emh0YXhlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEzOTEwMTEsImV4cCI6MjA3Njk2NzAxMX0.5AV3OaWeLiLliq5GTpbrzWav4Gd_KNaceAyK14BRi4I'
       );
 
       const { error } = await supabase.auth.signInWithOAuth({

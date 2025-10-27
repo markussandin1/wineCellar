@@ -43,6 +43,7 @@ export async function POST(request: Request) {
         data: {
           name: name,
         },
+        emailRedirectTo: `${process.env.NEXT_PUBLIC_SUPABASE_URL}/dashboard`,
       },
     });
 
@@ -69,9 +70,13 @@ export async function POST(request: Request) {
       );
     }
 
+    // Check if email confirmation is required
+    const needsEmailConfirmation = authData.user.identities && authData.user.identities.length === 0;
+
     return NextResponse.json(
       {
         message: 'User created successfully',
+        needsEmailConfirmation,
         user: {
           id: authData.user.id,
           email: authData.user.email,
