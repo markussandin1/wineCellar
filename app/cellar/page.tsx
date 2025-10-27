@@ -1,19 +1,31 @@
+import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { BottleList } from '@/components/bottles/bottle-list';
 import { Plus } from 'lucide-react';
+import { createClient } from '@/lib/supabase/server';
+import { getBottles } from '@/app/actions/bottle';
 
 export default async function CellarPage({
   searchParams,
 }: {
   searchParams: Promise<{ type?: string; region?: string; status?: string; search?: string }>;
 }) {
-  // TODO: Implement proper Supabase session check
-  // For now, show empty cellar without auth check
+  const supabase = await createClient();
+
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect('/login');
+  }
 
   const params = await searchParams;
 
-  // TODO: Re-enable getBottles once we have proper Supabase auth
-  const bottles: any[] = [];
+  const bottles = await getBottles({
+    wineType: params.type,
+    region: params.region,
+    status: params.status,
+    search: params.search,
+  });
 
   const hasActiveFilters = Boolean(
     (params.type && params.type !== 'all') ||

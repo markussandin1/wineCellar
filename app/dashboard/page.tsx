@@ -1,20 +1,19 @@
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { Wine, Plus, TrendingUp } from 'lucide-react';
+import { createClient } from '@/lib/supabase/server';
+import { getDashboardStats } from '@/app/actions/dashboard';
 
 export default async function DashboardPage() {
-  // TODO: Implement proper Supabase session check
-  // For now, we'll show the dashboard without auth check
-  // This will be fixed when we implement proper middleware
+  const supabase = await createClient();
 
-  const stats = {
-    totalBottles: 0,
-    totalValue: 0,
-    currency: 'SEK',
-    byType: {} as Record<string, number>,
-    byRegion: {} as Record<string, number>,
-    recentBottles: [] as any[]
-  };
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect('/login');
+  }
+
+  const stats = await getDashboardStats();
 
   const topTypes = Object.entries(stats.byType)
     .sort(([, a], [, b]) => (b as number) - (a as number))

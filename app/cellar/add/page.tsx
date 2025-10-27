@@ -1,7 +1,15 @@
+import { redirect } from 'next/navigation';
 import { AddBottleChoice } from '@/components/bottles/add-bottle-choice';
+import { createClient } from '@/lib/supabase/server';
 
 export default async function AddBottlePage() {
-  // TODO: Implement proper Supabase session check
+  const supabase = await createClient();
+
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect('/login');
+  }
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-2xl">

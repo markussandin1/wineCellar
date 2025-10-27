@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from '@/lib/supabase/client';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -20,10 +20,7 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      const supabase = createClient(
-        'https://pktiwlfxgfkkqxzhtaxe.supabase.co',
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBrdGl3bGZ4Z2Zra3F4emh0YXhlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEzOTEwMTEsImV4cCI6MjA3Njk2NzAxMX0.5AV3OaWeLiLliq5GTpbrzWav4Gd_KNaceAyK14BRi4I'
-      );
+      const supabase = createClient();
 
       const { data, error: signInError } = await supabase.auth.signInWithPassword({
         email: formData.email,
@@ -38,7 +35,8 @@ export default function LoginPage() {
       }
 
       console.log('Login successful, redirecting to dashboard...');
-      // Redirect to dashboard on success
+      // Refresh the page to trigger middleware
+      router.refresh();
       router.push('/dashboard');
     } catch (err) {
       console.error('Unexpected error:', err);
@@ -52,10 +50,7 @@ export default function LoginPage() {
     setError('');
 
     try {
-      const supabase = createClient(
-        'https://pktiwlfxgfkkqxzhtaxe.supabase.co',
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBrdGl3bGZ4Z2Zra3F4emh0YXhlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEzOTEwMTEsImV4cCI6MjA3Njk2NzAxMX0.5AV3OaWeLiLliq5GTpbrzWav4Gd_KNaceAyK14BRi4I'
-      );
+      const supabase = createClient();
 
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',

@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from '@/lib/supabase/client';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -51,10 +51,7 @@ export default function RegisterPage() {
       setSuccess('Account created successfully! Signing you in...');
 
       // Auto sign in with Supabase
-      const supabase = createClient(
-        'https://pktiwlfxgfkkqxzhtaxe.supabase.co',
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBrdGl3bGZ4Z2Zra3F4emh0YXhlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEzOTEwMTEsImV4cCI6MjA3Njk2NzAxMX0.5AV3OaWeLiLliq5GTpbrzWav4Gd_KNaceAyK14BRi4I'
-      );
+      const supabase = createClient();
 
       const { data: authData, error: signInError } = await supabase.auth.signInWithPassword({
         email: formData.email,
@@ -70,6 +67,7 @@ export default function RegisterPage() {
 
       // Redirect to dashboard on success
       setSuccess('Success! Redirecting to dashboard...');
+      router.refresh();
       setTimeout(() => router.push('/dashboard'), 1000);
     } catch (err) {
       setError('An unexpected error occurred');
@@ -82,10 +80,7 @@ export default function RegisterPage() {
     setError('');
 
     try {
-      const supabase = createClient(
-        'https://pktiwlfxgfkkqxzhtaxe.supabase.co',
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBrdGl3bGZ4Z2Zra3F4emh0YXhlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEzOTEwMTEsImV4cCI6MjA3Njk2NzAxMX0.5AV3OaWeLiLliq5GTpbrzWav4Gd_KNaceAyK14BRi4I'
-      );
+      const supabase = createClient();
 
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
