@@ -110,7 +110,12 @@ export function ScannedBottleForm({ extractedData, onBack, initialPlacement = 'c
       if (result.success) {
         router.push('/cellar');
         router.refresh();
+        return;
       }
+
+      const message = 'error' in result && result.error ? result.error : 'Failed to add bottle';
+      setError(message);
+      setIsSubmitting(false);
     } catch (err: any) {
       setError(err.message || 'Failed to add bottle');
       setIsSubmitting(false);

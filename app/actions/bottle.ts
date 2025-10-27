@@ -142,10 +142,10 @@ export async function createBottle(formData: FormData) {
           })
           .select('*');
 
-        if (createError || !newWines || newWines.length === 0) {
-          console.error('Error creating wine:', createError);
-          throw new Error('Failed to create wine');
-        }
+      if (createError || !newWines || newWines.length === 0) {
+        console.error('Error creating wine:', createError);
+        throw new Error(createError?.message || 'Failed to create wine');
+      }
 
         wineRecord = newWines[0];
         createdNewWine = true;
@@ -180,7 +180,7 @@ export async function createBottle(formData: FormData) {
 
     if (bottleError || !newBottles || newBottles.length === 0) {
       console.error('Error creating bottle:', bottleError);
-      throw new Error('Failed to create bottle');
+      throw new Error(bottleError?.message || 'Failed to create bottle');
     }
 
     const bottle = newBottles[0];
@@ -218,7 +218,10 @@ export async function createBottle(formData: FormData) {
     return { success: true, bottle_id: bottle.id };
   } catch (error) {
     console.error('Error creating bottle:', error);
-    throw new Error('Failed to create bottle');
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to create bottle',
+    };
   }
 }
 
@@ -590,7 +593,7 @@ export async function createBottleFromScan(formData: FormData) {
 
       if (createError || !newWines || newWines.length === 0) {
         console.error('Error creating wine:', createError);
-        throw new Error('Failed to create wine');
+        throw new Error(createError?.message || 'Failed to create wine');
       }
 
       wineRecord = newWines[0];
@@ -626,7 +629,7 @@ export async function createBottleFromScan(formData: FormData) {
 
     if (bottleError || !newBottles || newBottles.length === 0) {
       console.error('Error creating bottle:', bottleError);
-      throw new Error('Failed to create bottle');
+      throw new Error(bottleError?.message || 'Failed to create bottle');
     }
 
     const bottle = newBottles[0];
@@ -681,6 +684,9 @@ export async function createBottleFromScan(formData: FormData) {
     return { success: true, bottle_id: bottle.id };
   } catch (error) {
     console.error('Error creating bottle from scan:', error);
-    throw new Error('Failed to create bottle');
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to create bottle',
+    };
   }
 }
