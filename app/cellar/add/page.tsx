@@ -2,6 +2,8 @@ import { redirect } from 'next/navigation';
 import { AddBottleChoice } from '@/components/bottles/add-bottle-choice';
 import { createClient } from '@/lib/supabase/server';
 
+export const dynamic = 'force-dynamic';
+
 export default async function AddBottlePage() {
   const supabase = await createClient();
 
