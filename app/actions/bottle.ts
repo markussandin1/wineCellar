@@ -76,20 +76,26 @@ export async function createBottle(formData: FormData) {
       const { data: candidates, error: searchError } = await supabase
         .from('wines')
         .select('*')
-        .ilike('producerName', `%${validatedData.producerName}%`)
+        .ilike('producer_name', `%${validatedData.producerName}%`)
         .limit(20);
 
       if (searchError) {
         console.error('Error searching for wines:', searchError);
       }
 
+      // Map snake_case from DB to camelCase for wine matching
+      const mappedCandidates = (candidates || []).map(wine => ({
+        ...wine,
+        producerName: wine.producer_name,
+      }));
+
       const match = findBestWineMatch(
         {
           name: validatedData.wineName,
-          producer_name: validatedData.producerName,
+          producerName: validatedData.producerName,
           vintage: validatedData.vintage,
         },
-        candidates || []
+        mappedCandidates
       );
 
       if (match) {
@@ -182,13 +188,13 @@ export async function createBottle(formData: FormData) {
     if (createdNewWine) {
       const generated = await generateWineDescription({
         name: wineRecord.name,
-        producer_name: wineRecord.producerName,
-        wine_type: wineRecord.wineType ? wineRecord.wineType.toString() : undefined,
+        producerName: wineRecord.producer_name,
+        wineType: wineRecord.wine_type ? wineRecord.wine_type.toString() : undefined,
         vintage: wineRecord.vintage,
         country: wineRecord.country,
         region: wineRecord.region,
-        sub_region: wineRecord.subRegion,
-        primary_grape: wineRecord.primaryGrape,
+        subRegion: wineRecord.sub_region,
+        primaryGrape: wineRecord.primary_grape,
       });
 
       if (generated) {
@@ -514,24 +520,24 @@ export async function createBottleFromScan(formData: FormData) {
   const wineData = {
     wineName: formData.get('wineName') as string,
     vintage: formData.get('vintage') as string | null,
-    producer_name: formData.get('producerName') as string,
-    wine_type: formData.get('wineType') as string,
+    producerName: formData.get('producerName') as string,
+    wineType: formData.get('wineType') as string,
     country: formData.get('country') as string,
     region: formData.get('region') as string,
-    sub_region: (formData.get('subRegion') as string) || '',
-    primary_grape: (formData.get('primaryGrape') as string) || '',
+    subRegion: (formData.get('subRegion') as string) || '',
+    primaryGrape: (formData.get('primaryGrape') as string) || '',
   };
 
   // Parse bottle data
   const bottleData = {
     quantity: Number(formData.get('quantity')) || 1,
-    purchase_price: formData.get('purchasePrice') ? String(formData.get('purchasePrice')) : null,
+    purchasePrice: formData.get('purchasePrice') ? String(formData.get('purchasePrice')) : null,
     currency: (formData.get('currency') as string) || 'SEK',
-    purchase_date: (formData.get('purchaseDate') as string) || undefined,
-    purchase_location: (formData.get('purchaseLocation') as string) || '',
-    storage_location: (formData.get('storageLocation') as string) || '',
+    purchaseDate: (formData.get('purchaseDate') as string) || undefined,
+    purchaseLocation: (formData.get('purchaseLocation') as string) || '',
+    storageLocation: (formData.get('storageLocation') as string) || '',
     personalNotes: (formData.get('personalNotes') as string) || '',
-    acquisition_method: (formData.get('acquisitionMethod') as string) || 'purchased',
+    acquisitionMethod: (formData.get('acquisitionMethod') as string) || 'purchased',
     status: (formData.get('status') as string) || 'in_cellar',
   };
 
@@ -628,13 +634,13 @@ export async function createBottleFromScan(formData: FormData) {
     if (createdNewWine) {
       const generated = await generateWineDescription({
         name: wineRecord.name,
-        producer_name: wineRecord.producerName,
-        wine_type: wineRecord.wineType ? wineRecord.wineType.toString() : undefined,
+        producerName: wineRecord.producer_name,
+        wineType: wineRecord.wine_type ? wineRecord.wine_type.toString() : undefined,
         vintage: wineRecord.vintage,
         country: wineRecord.country,
         region: wineRecord.region,
-        sub_region: wineRecord.subRegion,
-        primary_grape: wineRecord.primaryGrape,
+        subRegion: wineRecord.sub_region,
+        primaryGrape: wineRecord.primary_grape,
       });
 
       if (generated) {
