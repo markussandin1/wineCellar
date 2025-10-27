@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { signIn } from 'next-auth/react';
+import { createClient } from '@supabase/supabase-js';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -13,15 +13,17 @@ export default function RegisterPage() {
     password: '',
   });
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setSuccess('');
     setIsLoading(true);
 
     try {
-      // Register user
+      // Register user via API
       const response = await fetch('/api/register', {
         method: 'POST',
         headers: {
@@ -38,21 +40,30 @@ export default function RegisterPage() {
         return;
       }
 
-      // Auto sign in after successful registration
-      const result = await signIn('credentials', {
+      // Show success message
+      setSuccess('Account created successfully! Signing you in...');
+
+      // Auto sign in with Supabase
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      );
+
+      const { data: authData, error: signInError } = await supabase.auth.signInWithPassword({
         email: formData.email,
         password: formData.password,
-        redirect: false,
       });
 
-      if (result?.error) {
-        setError('Registration successful but sign in failed. Please try signing in.');
+      if (signInError) {
+        setError('Account created! Please sign in manually.');
         setIsLoading(false);
+        setTimeout(() => router.push('/login'), 2000);
         return;
       }
 
       // Redirect to dashboard on success
-      router.push('/dashboard');
+      setSuccess('Success! Redirecting to dashboard...');
+      setTimeout(() => router.push('/dashboard'), 1000);
     } catch (err) {
       setError('An unexpected error occurred');
       setIsLoading(false);
@@ -61,8 +72,25 @@ export default function RegisterPage() {
 
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
+    setError('');
+
     try {
-      await signIn('google', { callbackUrl: '/dashboard' });
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      );
+
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/dashboard`,
+        },
+      });
+
+      if (error) {
+        setError('Google sign in failed');
+        setIsLoading(false);
+      }
     } catch (err) {
       setError('Google sign in failed');
       setIsLoading(false);
@@ -80,6 +108,11 @@ export default function RegisterPage() {
           {error && (
             <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
               {error}
+            </div>
+          )}
+          {success && (
+            <div className="rounded-md bg-green-500/10 p-3 text-sm text-green-600 dark:text-green-400">
+              {success}
             </div>
           )}
           <div className="space-y-4">

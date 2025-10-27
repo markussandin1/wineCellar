@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { signIn } from 'next-auth/react';
+import { createClient } from '@supabase/supabase-js';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -20,18 +20,23 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      const result = await signIn('credentials', {
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      );
+
+      const { data, error: signInError } = await supabase.auth.signInWithPassword({
         email: formData.email,
         password: formData.password,
-        redirect: false,
       });
 
-      if (result?.error) {
+      if (signInError) {
         setError('Invalid email or password');
         setIsLoading(false);
         return;
       }
 
+      // Redirect to dashboard on success
       router.push('/dashboard');
     } catch (err) {
       setError('An unexpected error occurred');
@@ -41,8 +46,25 @@ export default function LoginPage() {
 
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
+    setError('');
+
     try {
-      await signIn('google', { callbackUrl: '/dashboard' });
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      );
+
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/dashboard`,
+        },
+      });
+
+      if (error) {
+        setError('Google sign in failed');
+        setIsLoading(false);
+      }
     } catch (err) {
       setError('Google sign in failed');
       setIsLoading(false);
