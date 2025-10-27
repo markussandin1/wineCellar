@@ -185,54 +185,51 @@ export async function getBottles(filters?: {
     throw new Error('Unauthorized');
   }
 
-  const where: any = {
-    userId: user.id,
-  };
+  // Build Supabase query
+  let query = supabase
+    .from('Bottle')
+    .select(`
+      *,
+      wine:Wine(*)
+    `)
+    .eq('userId', user.id);
 
+  // Apply status filter
   if (filters?.status && filters.status !== 'all') {
     if (filters.status === 'watchlist') {
-      where.status = {
-        in: ['gifted', 'other'],
-      };
+      query = query.in('status', ['gifted', 'other']);
     } else {
-      where.status = filters.status;
+      query = query.eq('status', filters.status);
     }
   }
 
-  if (filters?.wineType || filters?.region || filters?.search) {
-    where.wine = {};
-
-    if (filters.wineType) {
-      where.wine.wineType = filters.wineType;
-    }
-
-    if (filters.region) {
-      where.wine.region = {
-        contains: filters.region,
-        mode: 'insensitive',
-      };
-    }
-
-    if (filters.search) {
-      where.wine.OR = [
-        { name: { contains: filters.search, mode: 'insensitive' } },
-        { producerName: { contains: filters.search, mode: 'insensitive' } },
-      ];
-    }
+  // Apply wine type filter
+  if (filters?.wineType) {
+    query = query.eq('wine.wineType', filters.wineType);
   }
 
-  const bottles = await prisma.bottle.findMany({
-    where,
-    include: {
-      wine: true,
-    },
-    orderBy: {
-      createdAt: 'desc',
-    },
-  });
+  // Apply region filter
+  if (filters?.region) {
+    query = query.ilike('wine.region', `%${filters.region}%`);
+  }
+
+  // Apply search filter (search in wine name or producer name)
+  if (filters?.search) {
+    query = query.or(`wine.name.ilike.%${filters.search}%,wine.producerName.ilike.%${filters.search}%`);
+  }
+
+  // Order by creation date
+  query = query.order('createdAt', { ascending: false });
+
+  const { data: bottles, error } = await query;
+
+  if (error) {
+    console.error('Error fetching bottles:', error);
+    throw new Error('Failed to fetch bottles');
+  }
 
   // Convert Decimal to string for all bottles
-  return bottles.map(bottle => ({
+  return (bottles || []).map(bottle => ({
     ...bottle,
     purchasePrice: bottle.purchasePrice ? bottle.purchasePrice.toString() : null,
     labelImageUrl: bottle.labelImageUrl,
@@ -250,22 +247,31 @@ export async function getBottle(id: string) {
     throw new Error('Unauthorized');
   }
 
-  const bottle = await prisma.bottle.findFirst({
-    where: {
-      id,
-      userId: user.id,
-    },
-    include: {
-      wine: true,
-      consumptionLogs: {
-        orderBy: {
-          consumedDate: 'desc',
-        },
-      },
-    },
-  });
+  // Get bottle with wine and consumption logs
+  const { data: bottles, error } = await supabase
+    .from('Bottle')
+    .select(`
+      *,
+      wine:Wine(*),
+      consumptionLogs:ConsumptionLog(*)
+    `)
+    .eq('id', id)
+    .eq('userId', user.id);
 
+  if (error) {
+    console.error('Error fetching bottle:', error);
+    throw new Error('Failed to fetch bottle');
+  }
+
+  const bottle = bottles?.[0];
   if (!bottle) return null;
+
+  // Sort consumption logs by consumed date (desc)
+  if (bottle.consumptionLogs) {
+    bottle.consumptionLogs.sort((a: any, b: any) =>
+      new Date(b.consumedDate).getTime() - new Date(a.consumedDate).getTime()
+    );
+  }
 
   // Convert Decimal to string
   return {

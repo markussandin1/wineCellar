@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { prisma } from '@/lib/prisma';
 import { uploadLabelImage } from '@/lib/supabase';
 import OpenAI from 'openai';
 
@@ -128,23 +127,24 @@ Only return the JSON object, nothing else. Be as accurate as possible.`,
     // Parse the JSON response
     const extracted = JSON.parse(cleanedText);
 
-    // Step 2: Search for existing wine in database
+    // Step 2: Search for existing wine in database using Supabase Data API
     console.log('Searching for existing wine in database...');
-    const existingWines = await prisma.wine.findMany({
-      where: {
-        producerName: {
-          contains: extracted.producerName,
-          mode: 'insensitive',
-        },
-      },
-      take: 10,
-    });
+    const { data: existingWines, error: searchError } = await supabase
+      .from('Wine')
+      .select('*')
+      .ilike('producerName', `%${extracted.producerName}%`)
+      .limit(10);
+
+    if (searchError) {
+      console.error('Error searching for wines:', searchError);
+      // Continue without existing wines instead of failing
+    }
 
     // Find best match using similarity scoring
     let bestMatch = null;
     let bestScore = 0;
 
-    for (const wine of existingWines) {
+    for (const wine of (existingWines || [])) {
       const nameScore = similarity(wine.name, extracted.wineName);
       const producerScore = similarity(wine.producerName, extracted.producerName);
       const vintageMatch = !extracted.vintage || wine.vintage === extracted.vintage;

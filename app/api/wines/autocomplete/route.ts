@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { prisma } from '@/lib/prisma';
 
 export async function GET(request: NextRequest) {
   try {
@@ -22,63 +21,45 @@ export async function GET(request: NextRequest) {
 
     // Autocomplete for producers
     if (type === 'producer') {
-      const producers = await prisma.wine.findMany({
-        where: {
-          producerName: {
-            contains: query,
-            mode: 'insensitive',
-          },
-        },
-        select: {
-          producerName: true,
-        },
-        distinct: ['producerName'],
-        take: 10,
-      });
+      const { data: wines, error } = await supabase
+        .from('Wine')
+        .select('producerName')
+        .ilike('producerName', `%${query}%`)
+        .limit(10);
 
-      const uniqueProducers = producers.map((p) => p.producerName);
+      if (error) {
+        console.error('Error fetching producers:', error);
+        return NextResponse.json({ error: 'Failed to fetch producers' }, { status: 500 });
+      }
+
+      // Extract unique producer names
+      const uniqueProducers = [...new Set(wines?.map((w) => w.producerName) || [])];
       return NextResponse.json({ results: uniqueProducers });
     }
 
     // Autocomplete for wines
     if (type === 'wine') {
-      const where: any = {
-        name: {
-          contains: query,
-          mode: 'insensitive',
-        },
-      };
+      let queryBuilder = supabase
+        .from('Wine')
+        .select('id, name, producerName, vintage, wineType, country, region, subRegion, primaryGrape, primaryLabelImageUrl')
+        .ilike('name', `%${query}%`);
 
       // Filter by producer if provided
       if (producer) {
-        where.producerName = {
-          contains: producer,
-          mode: 'insensitive',
-        };
+        queryBuilder = queryBuilder.ilike('producerName', `%${producer}%`);
       }
 
-      const wines = await prisma.wine.findMany({
-        where,
-        select: {
-          id: true,
-          name: true,
-          producerName: true,
-          vintage: true,
-          wineType: true,
-          country: true,
-          region: true,
-          subRegion: true,
-          primaryGrape: true,
-          primaryLabelImageUrl: true,
-        },
-        take: 10,
-        orderBy: [
-          { name: 'asc' },
-          { vintage: 'desc' },
-        ],
-      });
+      const { data: wines, error } = await queryBuilder
+        .order('name', { ascending: true })
+        .order('vintage', { ascending: false })
+        .limit(10);
 
-      return NextResponse.json({ results: wines });
+      if (error) {
+        console.error('Error fetching wines:', error);
+        return NextResponse.json({ error: 'Failed to fetch wines' }, { status: 500 });
+      }
+
+      return NextResponse.json({ results: wines || [] });
     }
 
     return NextResponse.json({ error: 'Invalid type parameter' }, { status: 400 });
