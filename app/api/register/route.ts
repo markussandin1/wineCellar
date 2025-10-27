@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import bcrypt from 'bcryptjs';
+import { createClient } from '@supabase/supabase-js';
 import { z } from 'zod';
 
 const registerSchema = z.object({
@@ -24,38 +23,61 @@ export async function POST(request: Request) {
 
     const { name, email, password } = validationResult.data;
 
-    // Check if user already exists
-    const existingUser = await prisma.user.findUnique({
-      where: { email },
+    // Create Supabase client
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false
+        }
+      }
+    );
+
+    // Sign up user with Supabase Auth
+    const { data: authData, error: authError } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          name: name,
+        },
+      },
     });
 
-    if (existingUser) {
+    if (authError) {
+      // Handle specific error cases
+      if (authError.message.includes('already registered')) {
+        return NextResponse.json(
+          { error: 'User with this email already exists' },
+          { status: 400 }
+        );
+      }
+
+      console.error('Supabase auth error:', authError);
       return NextResponse.json(
-        { error: 'User with this email already exists' },
+        { error: authError.message },
         { status: 400 }
       );
     }
 
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    // Create user
-    const user = await prisma.user.create({
-      data: {
-        name,
-        email,
-        password: hashedPassword,
-      },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        createdAt: true,
-      },
-    });
+    if (!authData.user) {
+      return NextResponse.json(
+        { error: 'Failed to create user' },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json(
-      { message: 'User created successfully', user },
+      {
+        message: 'User created successfully',
+        user: {
+          id: authData.user.id,
+          email: authData.user.email,
+          name: name,
+        },
+      },
       { status: 201 }
     );
   } catch (error) {

@@ -1,14 +1,30 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { createClient } from '@supabase/supabase-js';
 
 export async function GET() {
   try {
-    // Test database connection
-    await prisma.$queryRaw`SELECT 1`;
+    // Create Supabase client
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+
+    // Test database connection via Supabase REST API
+    const { data, error } = await supabase
+      .from('User')
+      .select('count')
+      .limit(1)
+      .single();
+
+    if (error && error.code !== 'PGRST116') {
+      // PGRST116 = no rows returned, which is OK for health check
+      throw error;
+    }
 
     return NextResponse.json({
       status: 'ok',
       database: 'connected',
+      method: 'Supabase REST API',
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
