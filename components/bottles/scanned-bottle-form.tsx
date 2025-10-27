@@ -401,7 +401,7 @@ export function ScannedBottleForm({ extractedData, onBack, initialPlacement = 'c
             <select
               id="currency"
               name="currency"
-              defaultValue={extractedData.estimatedPrice?.currency || userCurrency}
+              defaultValue={userCurrency}
               className="w-full rounded-md border bg-background px-3 py-2"
             >
               <option value="USD">USD</option>
@@ -409,6 +409,11 @@ export function ScannedBottleForm({ extractedData, onBack, initialPlacement = 'c
               <option value="GBP">GBP</option>
               <option value="SEK">SEK</option>
             </select>
+            {extractedData.estimatedPrice?.currency && extractedData.estimatedPrice.currency !== userCurrency && (
+              <p className="text-xs text-muted-foreground mt-1">
+                Original estimate was in {extractedData.estimatedPrice.currency}
+              </p>
+            )}
           </div>
         </div>
 
