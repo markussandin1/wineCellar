@@ -95,7 +95,7 @@ export interface LabelScanConfig {
 }
 
 export const labelScanConfig: LabelScanConfig = {
-  model: 'gpt-4o',
+  model: 'gpt-4.1-2024-11-04',
   maxTokens: 700,
   prompt: `Analyze this wine label and extract the following information in JSON format:
 {
