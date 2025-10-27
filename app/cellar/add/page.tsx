@@ -1,13 +1,7 @@
-import { auth } from '@/auth';
-import { redirect } from 'next/navigation';
 import { AddBottleChoice } from '@/components/bottles/add-bottle-choice';
 
 export default async function AddBottlePage() {
-  const session = await auth();
-
-  if (!session?.user) {
-    redirect('/login');
-  }
+  // TODO: Implement proper Supabase session check
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-2xl">

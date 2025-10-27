@@ -1,14 +1,9 @@
-import { auth } from '@/auth';
-import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { Wine } from 'lucide-react';
 
 export default async function Home() {
-  const session = await auth();
-
-  if (session?.user) {
-    redirect('/dashboard');
-  }
+  // TODO: Implement proper Supabase session check
+  // For now, show landing page without auth redirect
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center p-8">

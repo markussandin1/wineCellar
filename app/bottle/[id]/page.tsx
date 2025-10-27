@@ -1,18 +1,13 @@
-import { auth } from '@/auth';
-import { redirect } from 'next/navigation';
-import { getBottle } from '@/app/actions/bottle';
-import { BottleDetail } from '@/components/bottles/bottle-detail';
 import { notFound } from 'next/navigation';
+import { BottleDetail } from '@/components/bottles/bottle-detail';
 
 export default async function BottlePage({ params }: { params: Promise<{ id: string }> }) {
-  const session = await auth();
-
-  if (!session?.user) {
-    redirect('/login');
-  }
+  // TODO: Implement proper Supabase session check
 
   const { id } = await params;
-  const bottle = await getBottle(id);
+
+  // TODO: Re-enable getBottle once we have proper Supabase auth
+  const bottle = null;
 
   if (!bottle) {
     notFound();
