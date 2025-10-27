@@ -1,6 +1,6 @@
 'use server';
 
-import { auth } from '@/auth';
+import { createClient } from '@/lib/supabase/server';
 import { prisma } from '@/lib/prisma';
 import { bottleSchema, consumeBottleSchema, editBottleSchema } from '@/lib/validations/bottle';
 import { findBestWineMatch } from '@/lib/utils/wine-matching';
@@ -10,8 +10,10 @@ import { redirect } from 'next/navigation';
 import type { Wine } from '@/lib/generated/prisma';
 
 export async function createBottle(formData: FormData) {
-  const session = await auth();
-  if (!session?.user?.id) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user?.id) {
     throw new Error('Unauthorized');
   }
 
@@ -118,7 +120,7 @@ export async function createBottle(formData: FormData) {
 
     const bottle = await prisma.bottle.create({
       data: {
-        userId: session.user.id,
+        userId: user.id,
         wineId: wineRecord.id,
         quantity: validatedData.quantity,
         purchasePrice: validatedData.purchasePrice ? String(validatedData.purchasePrice) : null,
@@ -176,13 +178,15 @@ export async function getBottles(filters?: {
   status?: string;
   search?: string;
 }) {
-  const session = await auth();
-  if (!session?.user?.id) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user?.id) {
     throw new Error('Unauthorized');
   }
 
   const where: any = {
-    userId: session.user.id,
+    userId: user.id,
   };
 
   if (filters?.status && filters.status !== 'all') {
@@ -240,15 +244,16 @@ export async function getBottles(filters?: {
 }
 
 export async function getBottle(id: string) {
-  const session = await auth();
-  if (!session?.user?.id) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user?.id) {
     throw new Error('Unauthorized');
   }
 
   const bottle = await prisma.bottle.findFirst({
     where: {
       id,
-      userId: session.user.id,
+      userId: user.id,
     },
     include: {
       wine: true,
@@ -274,8 +279,9 @@ export async function getBottle(id: string) {
 }
 
 export async function updateBottle(data: any) {
-  const session = await auth();
-  if (!session?.user?.id) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user?.id) {
     throw new Error('Unauthorized');
   }
 
@@ -285,7 +291,7 @@ export async function updateBottle(data: any) {
   const existingBottle = await prisma.bottle.findFirst({
     where: {
       id: validatedData.id,
-      userId: session.user.id,
+      userId: user.id,
     },
   });
 
@@ -332,8 +338,9 @@ export async function updateBottle(data: any) {
 }
 
 export async function deleteBottle(id: string) {
-  const session = await auth();
-  if (!session?.user?.id) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user?.id) {
     throw new Error('Unauthorized');
   }
 
@@ -341,7 +348,7 @@ export async function deleteBottle(id: string) {
   const bottle = await prisma.bottle.findFirst({
     where: {
       id,
-      userId: session.user.id,
+      userId: user.id,
     },
   });
 
@@ -360,8 +367,9 @@ export async function deleteBottle(id: string) {
 }
 
 export async function consumeBottle(data: any) {
-  const session = await auth();
-  if (!session?.user?.id) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user?.id) {
     throw new Error('Unauthorized');
   }
 
@@ -371,7 +379,7 @@ export async function consumeBottle(data: any) {
   const bottle = await prisma.bottle.findFirst({
     where: {
       id: validatedData.bottleId,
-      userId: session.user.id,
+      userId: user.id,
     },
     include: {
       wine: true,
@@ -386,7 +394,7 @@ export async function consumeBottle(data: any) {
   await prisma.consumptionLog.create({
     data: {
       bottleId: validatedData.bottleId,
-      userId: session.user.id,
+      userId: user.id,
       wineId: bottle.wineId!,
       consumedDate: new Date(validatedData.consumedDate),
       quantityConsumed: validatedData.quantityConsumed,
@@ -419,8 +427,9 @@ export async function consumeBottle(data: any) {
 }
 
 export async function createBottleFromScan(formData: FormData) {
-  const session = await auth();
-  if (!session?.user?.id) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user?.id) {
     throw new Error('Unauthorized');
   }
 
@@ -495,7 +504,7 @@ export async function createBottleFromScan(formData: FormData) {
 
     const bottle = await prisma.bottle.create({
       data: {
-        userId: session.user.id,
+        userId: user.id,
         wineId: wineRecord.id,
         quantity: bottleData.quantity,
         purchasePrice: bottleData.purchasePrice,
@@ -540,7 +549,7 @@ export async function createBottleFromScan(formData: FormData) {
     if (imageUrl) {
       await prisma.labelScan.create({
         data: {
-          userId: session.user.id,
+          userId: user.id,
           bottleId: bottle.id,
           imageUrl,
           extractedData: wineData,
