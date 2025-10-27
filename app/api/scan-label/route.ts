@@ -90,8 +90,22 @@ export async function POST(request: NextRequest) {
   "region": "the region (or null if not visible)",
   "subRegion": "the sub-region/appellation (or null if not visible)",
   "primaryGrape": "the primary grape variety (or null if not visible)",
-  "confidence": "your confidence level as a decimal 0-1"
+  "estimatedPrice": {
+    "amount": "estimated retail price as a number (or null if you cannot estimate)",
+    "currency": "the currency code (SEK, USD, EUR, etc.) based on the country/region",
+    "confidence": "your confidence in this price estimate as a decimal 0-1",
+    "reasoning": "brief explanation of how you estimated the price"
+  },
+  "confidence": "your overall confidence level as a decimal 0-1"
 }
+
+For price estimation, consider:
+- Producer reputation and classification (e.g., Grand Cru, Premier Cru, DOC, DOCG)
+- Region prestige (e.g., Bordeaux, Burgundy, Barolo, Napa)
+- Vintage quality if known
+- Typical market prices for similar wines
+- Any visible awards or ratings
+- Default to the local currency of the wine's origin country
 
 Only return the JSON object, nothing else. Be as accurate as possible.`,
             },
@@ -104,7 +118,7 @@ Only return the JSON object, nothing else. Be as accurate as possible.`,
           ],
         },
       ],
-      max_tokens: 500,
+      max_tokens: 700,
     });
 
     const extractedText = visionResponse.choices[0]?.message?.content;

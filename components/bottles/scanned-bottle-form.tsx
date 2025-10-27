@@ -36,6 +36,12 @@ interface ScannedBottleFormProps {
     description?: string;
     tastingNotes?: string;
     aiGeneratedSummary?: string;
+    estimatedPrice?: {
+      amount?: number;
+      currency?: string;
+      confidence?: number;
+      reasoning?: string;
+    };
   };
   onBack: () => void;
   initialPlacement?: 'cellar' | 'watchlist';
@@ -365,6 +371,11 @@ export function ScannedBottleForm({ extractedData, onBack, initialPlacement = 'c
           <div>
             <label htmlFor="purchasePrice" className="block text-sm font-medium mb-2">
               Purchase Price (per bottle)
+              {extractedData.estimatedPrice?.amount && extractedData.estimatedPrice.confidence && (
+                <span className="ml-2 text-xs text-muted-foreground">
+                  (AI estimated - {Math.round(extractedData.estimatedPrice.confidence * 100)}% confidence)
+                </span>
+              )}
             </label>
             <input
               id="purchasePrice"
@@ -372,11 +383,14 @@ export function ScannedBottleForm({ extractedData, onBack, initialPlacement = 'c
               type="number"
               step="0.01"
               min="0"
+              defaultValue={extractedData.estimatedPrice?.amount || ''}
               className="w-full rounded-md border bg-background px-3 py-2"
             />
-            <p className="text-xs text-muted-foreground mt-1">
-              Enter the price per individual bottle
-            </p>
+            {extractedData.estimatedPrice?.reasoning && (
+              <p className="text-xs text-muted-foreground mt-1">
+                {extractedData.estimatedPrice.reasoning}
+              </p>
+            )}
           </div>
 
           <div>
@@ -386,7 +400,7 @@ export function ScannedBottleForm({ extractedData, onBack, initialPlacement = 'c
             <select
               id="currency"
               name="currency"
-              defaultValue="SEK"
+              defaultValue={extractedData.estimatedPrice?.currency || 'SEK'}
               className="w-full rounded-md border bg-background px-3 py-2"
             >
               <option value="USD">USD</option>
