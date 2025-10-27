@@ -7,6 +7,7 @@ import { generateWineDescription } from '@/lib/ai/wine-description';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { normalizeBottleRecord } from '@/lib/utils/supabase-normalize';
+import { ensureUserRecord } from '@/lib/utils/supabase-users';
 
 export async function createBottle(formData: FormData) {
   const supabase = await createClient();
@@ -15,6 +16,8 @@ export async function createBottle(formData: FormData) {
   if (!user?.id) {
     throw new Error('Unauthorized');
   }
+
+  await ensureUserRecord(supabase, user);
 
   // Parse and validate form data
   const rawData = {
@@ -239,6 +242,8 @@ export async function getBottles(filters?: {
     throw new Error('Unauthorized');
   }
 
+  await ensureUserRecord(supabase, user);
+
   // Build Supabase query
   let query = supabase
     .from('bottles')
@@ -292,6 +297,10 @@ export async function getBottle(id: string) {
     throw new Error('Unauthorized');
   }
 
+  await ensureUserRecord(supabase, user);
+
+  await ensureUserRecord(supabase, user);
+
   // Get bottle with wine and consumption logs
   const { data: bottles, error } = await supabase
     .from('bottles')
@@ -328,6 +337,8 @@ export async function updateBottle(data: any) {
   if (!user?.id) {
     throw new Error('Unauthorized');
   }
+
+  await ensureUserRecord(supabase, user);
 
   const validatedData = editBottleSchema.parse(data);
 
@@ -385,6 +396,8 @@ export async function deleteBottle(id: string) {
     throw new Error('Unauthorized');
   }
 
+  await ensureUserRecord(supabase, user);
+
   // Verify ownership
   const { data: existingBottles, error: fetchError } = await supabase
     .from('bottles')
@@ -418,6 +431,8 @@ export async function consumeBottle(data: any) {
   if (!user?.id) {
     throw new Error('Unauthorized');
   }
+
+  await ensureUserRecord(supabase, user);
 
   const validatedData = consumeBottleSchema.parse(data);
 

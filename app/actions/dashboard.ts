@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { normalizeBottleRecord } from '@/lib/utils/supabase-normalize';
+import { ensureUserRecord } from '@/lib/utils/supabase-users';
 
 export async function getDashboardStats() {
   const supabase = await createClient();
@@ -10,6 +11,8 @@ export async function getDashboardStats() {
   if (!user?.id) {
     throw new Error('Unauthorized');
   }
+
+  await ensureUserRecord(supabase, user);
 
   // Get all bottles for the user using Supabase Data API
   const { data: bottles, error } = await supabase

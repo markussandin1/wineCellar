@@ -145,6 +145,11 @@ export function BottleForm({ initialPlacement = 'cellar' }: BottleFormProps) {
     setProducerValue(wine.producerName);
   }
 
+  const shouldLockField = (fieldValue: unknown) => {
+    if (!selectedWine) return false;
+    return !(fieldValue === undefined || fieldValue === null || fieldValue === '');
+  };
+
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setIsSubmitting(true);
@@ -157,6 +162,24 @@ export function BottleForm({ initialPlacement = 'cellar' }: BottleFormProps) {
     formData.set('status', isWatchList ? 'other' : 'in_cellar');
     if (isWatchList) {
       formData.set('acquisitionMethod', 'other');
+    }
+
+    if (selectedWine) {
+      formData.set('wineName', selectedWine.name);
+      formData.set('producerName', selectedWine.producerName);
+      if (selectedWine.wineType && WINE_TYPES.some(t => t.value === selectedWine.wineType)) {
+        formData.set('wineType', selectedWine.wineType);
+      }
+      formData.set('country', selectedWine.country);
+      formData.set('region', selectedWine.region);
+      formData.set('subRegion', selectedWine.subRegion ?? '');
+      formData.set('primaryGrape', selectedWine.primaryGrape ?? '');
+
+      if (selectedWine.vintage) {
+        formData.set('vintage', String(selectedWine.vintage));
+      } else {
+        formData.delete('vintage');
+      }
     }
 
     try {
@@ -274,16 +297,16 @@ export function BottleForm({ initialPlacement = 'cellar' }: BottleFormProps) {
             <label htmlFor="producerName" className="block text-sm font-medium mb-2">
               Producer * {!selectedWine && <span className="text-xs text-muted-foreground">(start typing for suggestions)</span>}
             </label>
-            <Autocomplete
-              id="producerName"
-              name="producerName"
-              value={producerValue}
-              onChange={setProducerValue}
-              fetchSuggestions={fetchProducers}
-              placeholder="Marchesi di Barolo"
-              required
-              disabled={!!selectedWine}
-            />
+          <Autocomplete
+            id="producerName"
+            name="producerName"
+            value={producerValue}
+            onChange={setProducerValue}
+            fetchSuggestions={fetchProducers}
+            placeholder="Marchesi di Barolo"
+            required
+            disabled={shouldLockField(selectedWine?.producerName)}
+          />
           </div>
 
           <div>
@@ -299,7 +322,7 @@ export function BottleForm({ initialPlacement = 'cellar' }: BottleFormProps) {
               fetchSuggestions={fetchWines}
               placeholder="Barolo DOCG"
               required
-              disabled={!!selectedWine}
+              disabled={shouldLockField(selectedWine?.name)}
               renderSuggestion={(wine: SelectedWine) => (
                 <div>
                   <div className="font-medium">{wine.name}</div>
@@ -327,7 +350,7 @@ export function BottleForm({ initialPlacement = 'cellar' }: BottleFormProps) {
               defaultValue={selectedWine?.vintage || ''}
               className="w-full rounded-md border bg-background px-3 py-2"
               placeholder="2018"
-              disabled={!!selectedWine}
+              disabled={shouldLockField(selectedWine?.vintage)}
             />
           </div>
 
@@ -340,7 +363,7 @@ export function BottleForm({ initialPlacement = 'cellar' }: BottleFormProps) {
               name="wineType"
               required
               defaultValue={selectedWine?.wineType || ''}
-              disabled={!!selectedWine}
+              disabled={shouldLockField(selectedWine?.wineType)}
               className="w-full rounded-md border bg-background px-3 py-2"
             >
               <option value="">Select type...</option>
@@ -364,7 +387,7 @@ export function BottleForm({ initialPlacement = 'cellar' }: BottleFormProps) {
               type="text"
               required
               defaultValue={selectedWine?.country || ''}
-              disabled={!!selectedWine}
+              disabled={shouldLockField(selectedWine?.country)}
               className="w-full rounded-md border bg-background px-3 py-2"
               placeholder="Italy"
             />
@@ -380,7 +403,7 @@ export function BottleForm({ initialPlacement = 'cellar' }: BottleFormProps) {
               type="text"
               required
               defaultValue={selectedWine?.region || ''}
-              disabled={!!selectedWine}
+              disabled={shouldLockField(selectedWine?.region)}
               className="w-full rounded-md border bg-background px-3 py-2"
               placeholder="Piedmont"
             />
@@ -395,7 +418,7 @@ export function BottleForm({ initialPlacement = 'cellar' }: BottleFormProps) {
               name="subRegion"
               type="text"
               defaultValue={selectedWine?.subRegion || ''}
-              disabled={!!selectedWine}
+              disabled={shouldLockField(selectedWine?.subRegion)}
               className="w-full rounded-md border bg-background px-3 py-2"
               placeholder="Barolo DOCG"
             />
@@ -406,15 +429,15 @@ export function BottleForm({ initialPlacement = 'cellar' }: BottleFormProps) {
           <label htmlFor="primaryGrape" className="block text-sm font-medium mb-2">
             Primary Grape
           </label>
-          <input
-            id="primaryGrape"
-            name="primaryGrape"
-            type="text"
-            defaultValue={selectedWine?.primaryGrape || ''}
-            disabled={!!selectedWine}
-            className="w-full rounded-md border bg-background px-3 py-2"
-            placeholder="Nebbiolo"
-          />
+            <input
+              id="primaryGrape"
+              name="primaryGrape"
+              type="text"
+              defaultValue={selectedWine?.primaryGrape || ''}
+              disabled={shouldLockField(selectedWine?.primaryGrape)}
+              className="w-full rounded-md border bg-background px-3 py-2"
+              placeholder="Nebbiolo"
+            />
         </div>
       </div>
 

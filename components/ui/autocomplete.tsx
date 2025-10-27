@@ -6,7 +6,7 @@ import { Search, Loader2 } from 'lucide-react';
 interface AutocompleteProps {
   id: string;
   name: string;
-  value: string;
+  value?: string | null;
   onChange: (value: string) => void;
   onSelect?: (item: any) => void;
   fetchSuggestions: (query: string) => Promise<any[]>;
@@ -34,6 +34,7 @@ export function Autocomplete({
   debounceMs = 300,
   disabled = false,
 }: AutocompleteProps) {
+  const safeValue = value ?? '';
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -54,7 +55,7 @@ export function Autocomplete({
 
   // Fetch suggestions with debounce
   useEffect(() => {
-    if (value.length < minChars) {
+    if (safeValue.length < minChars) {
       setSuggestions([]);
       setShowSuggestions(false);
       return;
@@ -67,7 +68,7 @@ export function Autocomplete({
     debounceRef.current = setTimeout(async () => {
       setIsLoading(true);
       try {
-        const results = await fetchSuggestions(value);
+        const results = await fetchSuggestions(safeValue);
         setSuggestions(results);
         setShowSuggestions(true);
       } catch (error) {
@@ -83,7 +84,7 @@ export function Autocomplete({
         clearTimeout(debounceRef.current);
       }
     };
-  }, [value, fetchSuggestions, minChars, debounceMs]);
+  }, [safeValue, fetchSuggestions, minChars, debounceMs]);
 
   const handleSelect = (item: any) => {
     const itemValue = getSuggestionValue ? getSuggestionValue(item) : item;
@@ -127,7 +128,7 @@ export function Autocomplete({
           id={id}
           name={name}
           type="text"
-          value={value}
+          value={safeValue}
           onChange={(e) => onChange(e.target.value)}
           onKeyDown={handleKeyDown}
           onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
