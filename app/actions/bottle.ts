@@ -1,13 +1,11 @@
 'use server';
 
 import { createClient } from '@/lib/supabase/server';
-import { prisma } from '@/lib/prisma';
 import { bottleSchema, consumeBottleSchema, editBottleSchema } from '@/lib/validations/bottle';
 import { findBestWineMatch } from '@/lib/utils/wine-matching';
 import { generateWineDescription } from '@/lib/ai/wine-description';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import type { Wine } from '@/lib/generated/prisma';
 
 export async function createBottle(formData: FormData) {
   const supabase = await createClient();
@@ -45,32 +43,45 @@ export async function createBottle(formData: FormData) {
   const validatedData = bottleSchema.parse(rawData);
 
   try {
-    let wineRecord: Wine | null = null;
+    let wineRecord: any = null;
     let createdNewWine = false;
 
     if (validatedData.existingWineId) {
-      wineRecord = await prisma.wine.findUnique({ where: { id: validatedData.existingWineId } });
-      if (!wineRecord) {
+      const { data: wines, error } = await supabase
+        .from('Wine')
+        .select('*')
+        .eq('id', validatedData.existingWineId);
+
+      if (error || !wines || wines.length === 0) {
         throw new Error('Selected wine could not be found');
       }
 
+      wineRecord = wines[0];
+
       if (labelImageUrl && !wineRecord.primaryLabelImageUrl) {
-        wineRecord = await prisma.wine.update({
-          where: { id: wineRecord.id },
-          data: { primaryLabelImageUrl: labelImageUrl },
-        });
+        const { data: updatedWines, error: updateError } = await supabase
+          .from('Wine')
+          .update({ primaryLabelImageUrl: labelImageUrl })
+          .eq('id', wineRecord.id)
+          .select('*');
+
+        if (updateError) {
+          console.error('Error updating wine image:', updateError);
+        } else if (updatedWines && updatedWines.length > 0) {
+          wineRecord = updatedWines[0];
+        }
       }
     } else {
       console.log('Searching for matching wine...');
-      const candidates = await prisma.wine.findMany({
-        where: {
-          producerName: {
-            contains: validatedData.producerName,
-            mode: 'insensitive',
-          },
-        },
-        take: 20,
-      });
+      const { data: candidates, error: searchError } = await supabase
+        .from('Wine')
+        .select('*')
+        .ilike('producerName', `%${validatedData.producerName}%`)
+        .limit(20);
+
+      if (searchError) {
+        console.error('Error searching for wines:', searchError);
+      }
 
       const match = findBestWineMatch(
         {
@@ -78,26 +89,40 @@ export async function createBottle(formData: FormData) {
           producerName: validatedData.producerName,
           vintage: validatedData.vintage,
         },
-        candidates
+        candidates || []
       );
 
       if (match) {
         console.log(`Found matching wine: ${match.wine.name} (${Math.round(match.score * 100)}% match)`);
-        wineRecord = await prisma.wine.findUnique({ where: { id: match.wine.id } });
-        if (!wineRecord) {
+        const { data: wines, error } = await supabase
+          .from('Wine')
+          .select('*')
+          .eq('id', match.wine.id);
+
+        if (error || !wines || wines.length === 0) {
           throw new Error('Matched wine could not be retrieved');
         }
 
+        wineRecord = wines[0];
+
         if (labelImageUrl && !wineRecord.primaryLabelImageUrl) {
-          wineRecord = await prisma.wine.update({
-            where: { id: wineRecord.id },
-            data: { primaryLabelImageUrl: labelImageUrl },
-          });
+          const { data: updatedWines, error: updateError } = await supabase
+            .from('Wine')
+            .update({ primaryLabelImageUrl: labelImageUrl })
+            .eq('id', wineRecord.id)
+            .select('*');
+
+          if (updateError) {
+            console.error('Error updating wine image:', updateError);
+          } else if (updatedWines && updatedWines.length > 0) {
+            wineRecord = updatedWines[0];
+          }
         }
       } else {
         console.log('No match found, creating new wine');
-        wineRecord = await prisma.wine.create({
-          data: {
+        const { data: newWines, error: createError } = await supabase
+          .from('Wine')
+          .insert({
             name: validatedData.wineName,
             fullName: `${validatedData.producerName} ${validatedData.wineName} ${validatedData.vintage || 'NV'}`,
             vintage: validatedData.vintage ?? null,
@@ -108,8 +133,15 @@ export async function createBottle(formData: FormData) {
             subRegion: validatedData.subRegion || null,
             primaryGrape: validatedData.primaryGrape || null,
             primaryLabelImageUrl: labelImageUrl || null,
-          },
-        });
+          })
+          .select('*');
+
+        if (createError || !newWines || newWines.length === 0) {
+          console.error('Error creating wine:', createError);
+          throw new Error('Failed to create wine');
+        }
+
+        wineRecord = newWines[0];
         createdNewWine = true;
       }
     }
@@ -118,14 +150,15 @@ export async function createBottle(formData: FormData) {
       throw new Error('Could not determine which wine this bottle belongs to');
     }
 
-    const bottle = await prisma.bottle.create({
-      data: {
+    const { data: newBottles, error: bottleError } = await supabase
+      .from('Bottle')
+      .insert({
         userId: user.id,
         wineId: wineRecord.id,
         quantity: validatedData.quantity,
         purchasePrice: validatedData.purchasePrice ? String(validatedData.purchasePrice) : null,
         currency: validatedData.currency,
-        purchaseDate: validatedData.purchaseDate ? new Date(validatedData.purchaseDate) : null,
+        purchaseDate: validatedData.purchaseDate ? new Date(validatedData.purchaseDate).toISOString() : null,
         purchaseLocation: validatedData.purchaseLocation || null,
         storageLocation: validatedData.storageLocation || null,
         personalNotes: validatedData.personalNotes || null,
@@ -133,11 +166,18 @@ export async function createBottle(formData: FormData) {
         tags: validatedData.tags,
         acquisitionMethod: validatedData.acquisitionMethod,
         status: validatedData.status,
-      },
-      include: {
-        wine: true,
-      },
-    });
+      })
+      .select(`
+        *,
+        wine:Wine(*)
+      `);
+
+    if (bottleError || !newBottles || newBottles.length === 0) {
+      console.error('Error creating bottle:', bottleError);
+      throw new Error('Failed to create bottle');
+    }
+
+    const bottle = newBottles[0];
 
     if (createdNewWine) {
       const generated = await generateWineDescription({
@@ -152,13 +192,17 @@ export async function createBottle(formData: FormData) {
       });
 
       if (generated) {
-        await prisma.wine.update({
-          where: { id: wineRecord.id },
-          data: {
+        const { error: updateError } = await supabase
+          .from('Wine')
+          .update({
             description: generated.description,
             aiGeneratedSummary: generated.summary,
-          },
-        });
+          })
+          .eq('id', wineRecord.id);
+
+        if (updateError) {
+          console.error('Error updating wine with AI description:', updateError);
+        }
       }
     }
 
@@ -294,14 +338,13 @@ export async function updateBottle(data: any) {
   const validatedData = editBottleSchema.parse(data);
 
   // Verify ownership
-  const existingBottle = await prisma.bottle.findFirst({
-    where: {
-      id: validatedData.id,
-      userId: user.id,
-    },
-  });
+  const { data: existingBottles, error: fetchError } = await supabase
+    .from('Bottle')
+    .select('id')
+    .eq('id', validatedData.id)
+    .eq('userId', user.id);
 
-  if (!existingBottle) {
+  if (fetchError || !existingBottles || existingBottles.length === 0) {
     throw new Error('Bottle not found');
   }
 
@@ -310,7 +353,7 @@ export async function updateBottle(data: any) {
   if (validatedData.quantity !== undefined) updateData.quantity = validatedData.quantity;
   if (validatedData.purchasePrice !== undefined) updateData.purchasePrice = String(validatedData.purchasePrice);
   if (validatedData.currency) updateData.currency = validatedData.currency;
-  if (validatedData.purchaseDate) updateData.purchaseDate = new Date(validatedData.purchaseDate);
+  if (validatedData.purchaseDate) updateData.purchaseDate = new Date(validatedData.purchaseDate).toISOString();
   if (validatedData.purchaseLocation !== undefined) updateData.purchaseLocation = validatedData.purchaseLocation;
   if (validatedData.storageLocation !== undefined) updateData.storageLocation = validatedData.storageLocation;
   if (validatedData.personalNotes !== undefined) updateData.personalNotes = validatedData.personalNotes;
@@ -319,13 +362,21 @@ export async function updateBottle(data: any) {
   if (validatedData.labelImageUrl !== undefined) updateData.labelImageUrl = validatedData.labelImageUrl;
   if (validatedData.status) updateData.status = validatedData.status;
 
-  const bottle = await prisma.bottle.update({
-    where: { id: validatedData.id },
-    data: updateData,
-    include: {
-      wine: true,
-    },
-  });
+  const { data: updatedBottles, error: updateError } = await supabase
+    .from('Bottle')
+    .update(updateData)
+    .eq('id', validatedData.id)
+    .select(`
+      *,
+      wine:Wine(*)
+    `);
+
+  if (updateError || !updatedBottles || updatedBottles.length === 0) {
+    console.error('Error updating bottle:', updateError);
+    throw new Error('Failed to update bottle');
+  }
+
+  const bottle = updatedBottles[0];
 
   revalidatePath('/cellar');
   revalidatePath(`/bottle/${validatedData.id}`);
@@ -351,20 +402,25 @@ export async function deleteBottle(id: string) {
   }
 
   // Verify ownership
-  const bottle = await prisma.bottle.findFirst({
-    where: {
-      id,
-      userId: user.id,
-    },
-  });
+  const { data: existingBottles, error: fetchError } = await supabase
+    .from('Bottle')
+    .select('id')
+    .eq('id', id)
+    .eq('userId', user.id);
 
-  if (!bottle) {
+  if (fetchError || !existingBottles || existingBottles.length === 0) {
     throw new Error('Bottle not found');
   }
 
-  await prisma.bottle.delete({
-    where: { id },
-  });
+  const { error: deleteError } = await supabase
+    .from('Bottle')
+    .delete()
+    .eq('id', id);
+
+  if (deleteError) {
+    console.error('Error deleting bottle:', deleteError);
+    throw new Error('Failed to delete bottle');
+  }
 
   revalidatePath('/cellar');
   revalidatePath('/dashboard');
@@ -382,48 +438,59 @@ export async function consumeBottle(data: any) {
   const validatedData = consumeBottleSchema.parse(data);
 
   // Verify ownership and get bottle
-  const bottle = await prisma.bottle.findFirst({
-    where: {
-      id: validatedData.bottleId,
-      userId: user.id,
-    },
-    include: {
-      wine: true,
-    },
-  });
+  const { data: bottles, error: fetchError } = await supabase
+    .from('Bottle')
+    .select(`
+      *,
+      wine:Wine(*)
+    `)
+    .eq('id', validatedData.bottleId)
+    .eq('userId', user.id);
 
-  if (!bottle) {
+  if (fetchError || !bottles || bottles.length === 0) {
     throw new Error('Bottle not found');
   }
 
+  const bottle = bottles[0];
+
   // Create consumption log
-  await prisma.consumptionLog.create({
-    data: {
+  const { error: logError } = await supabase
+    .from('ConsumptionLog')
+    .insert({
       bottleId: validatedData.bottleId,
       userId: user.id,
       wineId: bottle.wineId!,
-      consumedDate: new Date(validatedData.consumedDate),
+      consumedDate: new Date(validatedData.consumedDate).toISOString(),
       quantityConsumed: validatedData.quantityConsumed,
       rating: validatedData.rating,
       tastingNotes: validatedData.tastingNotes,
       occasion: validatedData.occasion,
       companions: validatedData.companions,
       location: validatedData.location,
-    },
-  });
+    });
+
+  if (logError) {
+    console.error('Error creating consumption log:', logError);
+    throw new Error('Failed to create consumption log');
+  }
 
   // Update bottle quantity and status
   const newQuantity = bottle.quantity - validatedData.quantityConsumed;
 
-  await prisma.bottle.update({
-    where: { id: validatedData.bottleId },
-    data: {
+  const { error: updateError } = await supabase
+    .from('Bottle')
+    .update({
       quantity: newQuantity,
       status: newQuantity === 0 ? 'consumed' : 'in_cellar',
-      consumedDate: newQuantity === 0 ? new Date(validatedData.consumedDate) : null,
+      consumedDate: newQuantity === 0 ? new Date(validatedData.consumedDate).toISOString() : null,
       rating: validatedData.rating || bottle.rating,
-    },
-  });
+    })
+    .eq('id', validatedData.bottleId);
+
+  if (updateError) {
+    console.error('Error updating bottle:', updateError);
+    throw new Error('Failed to update bottle');
+  }
 
   revalidatePath('/cellar');
   revalidatePath(`/bottle/${validatedData.bottleId}`);
@@ -469,25 +536,39 @@ export async function createBottleFromScan(formData: FormData) {
   };
 
   try {
-    let wineRecord: Wine | null = null;
+    let wineRecord: any = null;
     let createdNewWine = false;
 
     if (existingWineId) {
-      wineRecord = await prisma.wine.findUnique({ where: { id: existingWineId as string } });
-      if (!wineRecord) {
+      const { data: wines, error } = await supabase
+        .from('Wine')
+        .select('*')
+        .eq('id', existingWineId as string);
+
+      if (error || !wines || wines.length === 0) {
         throw new Error('Selected wine could not be found');
       }
 
+      wineRecord = wines[0];
+
       if (imageUrl && !wineRecord.primaryLabelImageUrl) {
-        wineRecord = await prisma.wine.update({
-          where: { id: wineRecord.id },
-          data: { primaryLabelImageUrl: imageUrl },
-        });
-        console.log('Set primary label image for existing wine');
+        const { data: updatedWines, error: updateError } = await supabase
+          .from('Wine')
+          .update({ primaryLabelImageUrl: imageUrl })
+          .eq('id', wineRecord.id)
+          .select('*');
+
+        if (updateError) {
+          console.error('Error updating wine image:', updateError);
+        } else if (updatedWines && updatedWines.length > 0) {
+          wineRecord = updatedWines[0];
+          console.log('Set primary label image for existing wine');
+        }
       }
     } else {
-      wineRecord = await prisma.wine.create({
-        data: {
+      const { data: newWines, error: createError } = await supabase
+        .from('Wine')
+        .insert({
           name: wineData.wineName,
           fullName: `${wineData.producerName} ${wineData.wineName} ${wineData.vintage || 'NV'}`,
           vintage: wineData.vintage ? Number(wineData.vintage) : null,
@@ -498,8 +579,15 @@ export async function createBottleFromScan(formData: FormData) {
           subRegion: wineData.subRegion || null,
           primaryGrape: wineData.primaryGrape || null,
           primaryLabelImageUrl: imageUrl,
-        },
-      });
+        })
+        .select('*');
+
+      if (createError || !newWines || newWines.length === 0) {
+        console.error('Error creating wine:', createError);
+        throw new Error('Failed to create wine');
+      }
+
+      wineRecord = newWines[0];
       createdNewWine = true;
       console.log('Created new wine:', wineRecord.id);
     }
@@ -508,14 +596,15 @@ export async function createBottleFromScan(formData: FormData) {
       throw new Error('Could not create or locate wine record');
     }
 
-    const bottle = await prisma.bottle.create({
-      data: {
+    const { data: newBottles, error: bottleError } = await supabase
+      .from('Bottle')
+      .insert({
         userId: user.id,
         wineId: wineRecord.id,
         quantity: bottleData.quantity,
         purchasePrice: bottleData.purchasePrice,
         currency: bottleData.currency,
-        purchaseDate: bottleData.purchaseDate ? new Date(bottleData.purchaseDate) : null,
+        purchaseDate: bottleData.purchaseDate ? new Date(bottleData.purchaseDate).toISOString() : null,
         purchaseLocation: bottleData.purchaseLocation || null,
         storageLocation: bottleData.storageLocation || null,
         personalNotes: bottleData.personalNotes || null,
@@ -523,11 +612,18 @@ export async function createBottleFromScan(formData: FormData) {
         tags: [],
         acquisitionMethod: bottleData.acquisitionMethod as any,
         status: bottleData.status as any,
-      },
-      include: {
-        wine: true,
-      },
-    });
+      })
+      .select(`
+        *,
+        wine:Wine(*)
+      `);
+
+    if (bottleError || !newBottles || newBottles.length === 0) {
+      console.error('Error creating bottle:', bottleError);
+      throw new Error('Failed to create bottle');
+    }
+
+    const bottle = newBottles[0];
 
     if (createdNewWine) {
       const generated = await generateWineDescription({
@@ -542,26 +638,35 @@ export async function createBottleFromScan(formData: FormData) {
       });
 
       if (generated) {
-        await prisma.wine.update({
-          where: { id: wineRecord.id },
-          data: {
+        const { error: updateError } = await supabase
+          .from('Wine')
+          .update({
             description: generated.description,
             aiGeneratedSummary: generated.summary,
-          },
-        });
+          })
+          .eq('id', wineRecord.id);
+
+        if (updateError) {
+          console.error('Error updating wine with AI description:', updateError);
+        }
       }
     }
 
     if (imageUrl) {
-      await prisma.labelScan.create({
-        data: {
+      const { error: scanError } = await supabase
+        .from('LabelScan')
+        .insert({
           userId: user.id,
           bottleId: bottle.id,
           imageUrl,
           extractedData: wineData,
           userConfirmed: true,
-        },
-      });
+        });
+
+      if (scanError) {
+        console.error('Error creating label scan:', scanError);
+        // Don't fail the whole operation if label scan fails
+      }
     }
 
     revalidatePath('/cellar');
