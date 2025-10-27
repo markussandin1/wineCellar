@@ -132,7 +132,7 @@ Only return the JSON object, nothing else. Be as accurate as possible.`,
     const { data: existingWines, error: searchError } = await supabase
       .from('wines')
       .select('*')
-      .ilike('producerName', `%${extracted.producerName}%`)
+      .ilike('producer_name', `%${extracted.producerName}%`)
       .limit(10);
 
     if (searchError) {
@@ -146,7 +146,7 @@ Only return the JSON object, nothing else. Be as accurate as possible.`,
 
     for (const wine of (existingWines || [])) {
       const nameScore = similarity(wine.name, extracted.wineName);
-      const producerScore = similarity(wine.producerName, extracted.producerName);
+      const producerScore = similarity(wine.producer_name, extracted.producerName);
       const vintageMatch = !extracted.vintage || wine.vintage === extracted.vintage;
 
       const totalScore = (nameScore + producerScore) / 2;
@@ -164,20 +164,20 @@ Only return the JSON object, nothing else. Be as accurate as possible.`,
       // Return existing wine data
       return NextResponse.json({
         wineName: bestMatch.name,
-        producerName: bestMatch.producerName,
+        producerName: bestMatch.producer_name,
         vintage: bestMatch.vintage,
-        wineType: bestMatch.wineType,
+        wineType: bestMatch.wine_type,
         country: bestMatch.country,
         region: bestMatch.region,
-        subRegion: bestMatch.subRegion,
-        primaryGrape: bestMatch.primaryGrape,
+        subRegion: bestMatch.sub_region,
+        primaryGrape: bestMatch.primary_grape,
         confidence: bestScore,
         existingWineId: bestMatch.id,
         imageUrl, // Include uploaded image URL
         // Include additional wine data if available
         description: bestMatch.description,
-        tastingNotes: bestMatch.tastingNotes,
-        aiGeneratedSummary: bestMatch.aiGeneratedSummary,
+        tastingNotes: bestMatch.tasting_notes,
+        aiGeneratedSummary: bestMatch.ai_generated_summary,
       });
     }
 

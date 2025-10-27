@@ -23,8 +23,8 @@ export async function GET(request: NextRequest) {
     if (type === 'producer') {
       const { data: wines, error } = await supabase
         .from('wines')
-        .select('producerName')
-        .ilike('producerName', `%${query}%`)
+        .select('producer_name')
+        .ilike('producer_name', `%${query}%`)
         .limit(10);
 
       if (error) {
@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
       }
 
       // Extract unique producer names
-      const uniqueProducers = [...new Set(wines?.map((w) => w.producerName) || [])];
+      const uniqueProducers = [...new Set(wines?.map((w) => w.producer_name) || [])];
       return NextResponse.json({ results: uniqueProducers });
     }
 
@@ -41,12 +41,12 @@ export async function GET(request: NextRequest) {
     if (type === 'wine') {
       let queryBuilder = supabase
         .from('wines')
-        .select('id, name, producerName, vintage, wineType, country, region, subRegion, primaryGrape, primaryLabelImageUrl')
+        .select('id, name, producer_name, vintage, wine_type, country, region, sub_region, primary_grape, primary_label_image_url')
         .ilike('name', `%${query}%`);
 
       // Filter by producer if provided
       if (producer) {
-        queryBuilder = queryBuilder.ilike('producerName', `%${producer}%`);
+        queryBuilder = queryBuilder.ilike('producer_name', `%${producer}%`);
       }
 
       const { data: wines, error } = await queryBuilder

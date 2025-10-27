@@ -19,21 +19,21 @@ export async function createBottle(formData: FormData) {
   const rawData = {
     wineName: formData.get('wineName'),
     vintage: formData.get('vintage') || null,
-    producerName: formData.get('producerName'),
-    wineType: formData.get('wineType'),
+    producer_name: formData.get('producerName'),
+    wine_type: formData.get('wineType'),
     country: formData.get('country'),
     region: formData.get('region'),
-    subRegion: formData.get('subRegion') || '',
-    primaryGrape: formData.get('primaryGrape') || '',
+    sub_region: formData.get('subRegion') || '',
+    primary_grape: formData.get('primaryGrape') || '',
     quantity: formData.get('quantity') || 1,
-    purchasePrice: formData.get('purchasePrice') || undefined,
+    purchase_price: formData.get('purchasePrice') || undefined,
     currency: formData.get('currency') || 'USD',
-    purchaseDate: formData.get('purchaseDate') || undefined,
-    purchaseLocation: formData.get('purchaseLocation') || '',
-    storageLocation: formData.get('storageLocation') || '',
+    purchase_date: formData.get('purchaseDate') || undefined,
+    purchase_location: formData.get('purchaseLocation') || '',
+    storage_location: formData.get('storageLocation') || '',
     personalNotes: formData.get('personalNotes') || '',
     tags: formData.get('tags') ? JSON.parse(formData.get('tags') as string) : [],
-    acquisitionMethod: formData.get('acquisitionMethod') || 'purchased',
+    acquisition_method: formData.get('acquisitionMethod') || 'purchased',
     existingWineId: formData.get('existingWineId') || undefined,
     status: formData.get('status') || 'in_cellar',
   };
@@ -61,7 +61,7 @@ export async function createBottle(formData: FormData) {
       if (labelImageUrl && !wineRecord.primaryLabelImageUrl) {
         const { data: updatedWines, error: updateError } = await supabase
           .from('wines')
-          .update({ primaryLabelImageUrl: labelImageUrl })
+          .update({ primary_label_image_url: labelImageUrl })
           .eq('id', wineRecord.id)
           .select('*');
 
@@ -86,7 +86,7 @@ export async function createBottle(formData: FormData) {
       const match = findBestWineMatch(
         {
           name: validatedData.wineName,
-          producerName: validatedData.producerName,
+          producer_name: validatedData.producerName,
           vintage: validatedData.vintage,
         },
         candidates || []
@@ -108,7 +108,7 @@ export async function createBottle(formData: FormData) {
         if (labelImageUrl && !wineRecord.primaryLabelImageUrl) {
           const { data: updatedWines, error: updateError } = await supabase
             .from('wines')
-            .update({ primaryLabelImageUrl: labelImageUrl })
+            .update({ primary_label_image_url: labelImageUrl })
             .eq('id', wineRecord.id)
             .select('*');
 
@@ -124,15 +124,15 @@ export async function createBottle(formData: FormData) {
           .from('wines')
           .insert({
             name: validatedData.wineName,
-            fullName: `${validatedData.producerName} ${validatedData.wineName} ${validatedData.vintage || 'NV'}`,
+            full_name: `${validatedData.producerName} ${validatedData.wineName} ${validatedData.vintage || 'NV'}`,
             vintage: validatedData.vintage ?? null,
-            producerName: validatedData.producerName,
-            wineType: validatedData.wineType,
+            producer_name: validatedData.producerName,
+            wine_type: validatedData.wineType,
             country: validatedData.country,
             region: validatedData.region,
-            subRegion: validatedData.subRegion || null,
-            primaryGrape: validatedData.primaryGrape || null,
-            primaryLabelImageUrl: labelImageUrl || null,
+            sub_region: validatedData.subRegion || null,
+            primary_grape: validatedData.primaryGrape || null,
+            primary_label_image_url: labelImageUrl || null,
           })
           .select('*');
 
@@ -153,18 +153,18 @@ export async function createBottle(formData: FormData) {
     const { data: newBottles, error: bottleError } = await supabase
       .from('bottles')
       .insert({
-        userId: user.id,
-        wineId: wineRecord.id,
+        user_id: user.id,
+        wine_id: wineRecord.id,
         quantity: validatedData.quantity,
-        purchasePrice: validatedData.purchasePrice ? String(validatedData.purchasePrice) : null,
+        purchase_price: validatedData.purchasePrice ? String(validatedData.purchasePrice) : null,
         currency: validatedData.currency,
-        purchaseDate: validatedData.purchaseDate ? new Date(validatedData.purchaseDate).toISOString() : null,
-        purchaseLocation: validatedData.purchaseLocation || null,
-        storageLocation: validatedData.storageLocation || null,
+        purchase_date: validatedData.purchaseDate ? new Date(validatedData.purchaseDate).toISOString() : null,
+        purchase_location: validatedData.purchaseLocation || null,
+        storage_location: validatedData.storageLocation || null,
         personalNotes: validatedData.personalNotes || null,
-        labelImageUrl: labelImageUrl || null,
+        label_image_url: labelImageUrl || null,
         tags: validatedData.tags,
-        acquisitionMethod: validatedData.acquisitionMethod,
+        acquisition_method: validatedData.acquisitionMethod,
         status: validatedData.status,
       })
       .select(`
@@ -182,13 +182,13 @@ export async function createBottle(formData: FormData) {
     if (createdNewWine) {
       const generated = await generateWineDescription({
         name: wineRecord.name,
-        producerName: wineRecord.producerName,
-        wineType: wineRecord.wineType ? wineRecord.wineType.toString() : undefined,
+        producer_name: wineRecord.producerName,
+        wine_type: wineRecord.wineType ? wineRecord.wineType.toString() : undefined,
         vintage: wineRecord.vintage,
         country: wineRecord.country,
         region: wineRecord.region,
-        subRegion: wineRecord.subRegion,
-        primaryGrape: wineRecord.primaryGrape,
+        sub_region: wineRecord.subRegion,
+        primary_grape: wineRecord.primaryGrape,
       });
 
       if (generated) {
@@ -209,7 +209,7 @@ export async function createBottle(formData: FormData) {
     revalidatePath('/cellar');
     revalidatePath('/dashboard');
 
-    return { success: true, bottleId: bottle.id };
+    return { success: true, bottle_id: bottle.id };
   } catch (error) {
     console.error('Error creating bottle:', error);
     throw new Error('Failed to create bottle');
@@ -236,7 +236,7 @@ export async function getBottles(filters?: {
       *,
       wine:wines(*)
     `)
-    .eq('userId', user.id);
+    .eq('user_id', user.id);
 
   // Apply status filter
   if (filters?.status && filters.status !== 'all') {
@@ -249,7 +249,7 @@ export async function getBottles(filters?: {
 
   // Apply wine type filter
   if (filters?.wineType) {
-    query = query.eq('wine.wineType', filters.wineType);
+    query = query.eq('wine.wine_type', filters.wineType);
   }
 
   // Apply region filter
@@ -259,11 +259,11 @@ export async function getBottles(filters?: {
 
   // Apply search filter (search in wine name or producer name)
   if (filters?.search) {
-    query = query.or(`wine.name.ilike.%${filters.search}%,wine.producerName.ilike.%${filters.search}%`);
+    query = query.or(`wine.name.ilike.%${filters.search}%,wine.producer_name.ilike.%${filters.search}%`);
   }
 
   // Order by creation date
-  query = query.order('createdAt', { ascending: false });
+  query = query.order('created_at', { ascending: false });
 
   const { data: bottles, error } = await query;
 
@@ -275,8 +275,8 @@ export async function getBottles(filters?: {
   // Convert Decimal to string for all bottles
   return (bottles || []).map(bottle => ({
     ...bottle,
-    purchasePrice: bottle.purchasePrice ? bottle.purchasePrice.toString() : null,
-    labelImageUrl: bottle.labelImageUrl,
+    purchase_price: bottle.purchasePrice ? bottle.purchasePrice.toString() : null,
+    label_image_url: bottle.labelImageUrl,
     wine: bottle.wine ? {
       ...bottle.wine,
       alcoholPercentage: bottle.wine.alcoholPercentage ? bottle.wine.alcoholPercentage.toString() : null,
@@ -300,7 +300,7 @@ export async function getBottle(id: string) {
       consumptionLogs:consumption_logs(*)
     `)
     .eq('id', id)
-    .eq('userId', user.id);
+    .eq('user_id', user.id);
 
   if (error) {
     console.error('Error fetching bottle:', error);
@@ -320,7 +320,7 @@ export async function getBottle(id: string) {
   // Convert Decimal to string
   return {
     ...bottle,
-    purchasePrice: bottle.purchasePrice ? bottle.purchasePrice.toString() : null,
+    purchase_price: bottle.purchasePrice ? bottle.purchasePrice.toString() : null,
     wine: bottle.wine ? {
       ...bottle.wine,
       alcoholPercentage: bottle.wine.alcoholPercentage ? bottle.wine.alcoholPercentage.toString() : null,
@@ -342,7 +342,7 @@ export async function updateBottle(data: any) {
     .from('bottles')
     .select('id')
     .eq('id', validatedData.id)
-    .eq('userId', user.id);
+    .eq('user_id', user.id);
 
   if (fetchError || !existingBottles || existingBottles.length === 0) {
     throw new Error('Bottle not found');
@@ -384,7 +384,7 @@ export async function updateBottle(data: any) {
   // Convert Decimal to string
   const serializedBottle = {
     ...bottle,
-    purchasePrice: bottle.purchasePrice ? bottle.purchasePrice.toString() : null,
+    purchase_price: bottle.purchasePrice ? bottle.purchasePrice.toString() : null,
     wine: bottle.wine ? {
       ...bottle.wine,
       alcoholPercentage: bottle.wine.alcoholPercentage ? bottle.wine.alcoholPercentage.toString() : null,
@@ -406,7 +406,7 @@ export async function deleteBottle(id: string) {
     .from('bottles')
     .select('id')
     .eq('id', id)
-    .eq('userId', user.id);
+    .eq('user_id', user.id);
 
   if (fetchError || !existingBottles || existingBottles.length === 0) {
     throw new Error('Bottle not found');
@@ -445,7 +445,7 @@ export async function consumeBottle(data: any) {
       wine:wines(*)
     `)
     .eq('id', validatedData.bottleId)
-    .eq('userId', user.id);
+    .eq('user_id', user.id);
 
   if (fetchError || !bottles || bottles.length === 0) {
     throw new Error('Bottle not found');
@@ -457,13 +457,13 @@ export async function consumeBottle(data: any) {
   const { error: logError } = await supabase
     .from('consumption_logs')
     .insert({
-      bottleId: validatedData.bottleId,
-      userId: user.id,
-      wineId: bottle.wineId!,
-      consumedDate: new Date(validatedData.consumedDate).toISOString(),
-      quantityConsumed: validatedData.quantityConsumed,
+      bottle_id: validatedData.bottleId,
+      user_id: user.id,
+      wine_id: bottle.wineId!,
+      consumed_date: new Date(validatedData.consumedDate).toISOString(),
+      quantity_consumed: validatedData.quantityConsumed,
       rating: validatedData.rating,
-      tastingNotes: validatedData.tastingNotes,
+      tasting_notes: validatedData.tastingNotes,
       occasion: validatedData.occasion,
       companions: validatedData.companions,
       location: validatedData.location,
@@ -482,7 +482,7 @@ export async function consumeBottle(data: any) {
     .update({
       quantity: newQuantity,
       status: newQuantity === 0 ? 'consumed' : 'in_cellar',
-      consumedDate: newQuantity === 0 ? new Date(validatedData.consumedDate).toISOString() : null,
+      consumed_date: newQuantity === 0 ? new Date(validatedData.consumedDate).toISOString() : null,
       rating: validatedData.rating || bottle.rating,
     })
     .eq('id', validatedData.bottleId);
@@ -514,24 +514,24 @@ export async function createBottleFromScan(formData: FormData) {
   const wineData = {
     wineName: formData.get('wineName') as string,
     vintage: formData.get('vintage') as string | null,
-    producerName: formData.get('producerName') as string,
-    wineType: formData.get('wineType') as string,
+    producer_name: formData.get('producerName') as string,
+    wine_type: formData.get('wineType') as string,
     country: formData.get('country') as string,
     region: formData.get('region') as string,
-    subRegion: (formData.get('subRegion') as string) || '',
-    primaryGrape: (formData.get('primaryGrape') as string) || '',
+    sub_region: (formData.get('subRegion') as string) || '',
+    primary_grape: (formData.get('primaryGrape') as string) || '',
   };
 
   // Parse bottle data
   const bottleData = {
     quantity: Number(formData.get('quantity')) || 1,
-    purchasePrice: formData.get('purchasePrice') ? String(formData.get('purchasePrice')) : null,
+    purchase_price: formData.get('purchasePrice') ? String(formData.get('purchasePrice')) : null,
     currency: (formData.get('currency') as string) || 'SEK',
-    purchaseDate: (formData.get('purchaseDate') as string) || undefined,
-    purchaseLocation: (formData.get('purchaseLocation') as string) || '',
-    storageLocation: (formData.get('storageLocation') as string) || '',
+    purchase_date: (formData.get('purchaseDate') as string) || undefined,
+    purchase_location: (formData.get('purchaseLocation') as string) || '',
+    storage_location: (formData.get('storageLocation') as string) || '',
     personalNotes: (formData.get('personalNotes') as string) || '',
-    acquisitionMethod: (formData.get('acquisitionMethod') as string) || 'purchased',
+    acquisition_method: (formData.get('acquisitionMethod') as string) || 'purchased',
     status: (formData.get('status') as string) || 'in_cellar',
   };
 
@@ -554,7 +554,7 @@ export async function createBottleFromScan(formData: FormData) {
       if (imageUrl && !wineRecord.primaryLabelImageUrl) {
         const { data: updatedWines, error: updateError } = await supabase
           .from('wines')
-          .update({ primaryLabelImageUrl: imageUrl })
+          .update({ primary_label_image_url: imageUrl })
           .eq('id', wineRecord.id)
           .select('*');
 
@@ -570,15 +570,15 @@ export async function createBottleFromScan(formData: FormData) {
         .from('wines')
         .insert({
           name: wineData.wineName,
-          fullName: `${wineData.producerName} ${wineData.wineName} ${wineData.vintage || 'NV'}`,
+          full_name: `${wineData.producerName} ${wineData.wineName} ${wineData.vintage || 'NV'}`,
           vintage: wineData.vintage ? Number(wineData.vintage) : null,
-          producerName: wineData.producerName,
-          wineType: wineData.wineType as any,
+          producer_name: wineData.producerName,
+          wine_type: wineData.wineType as any,
           country: wineData.country,
           region: wineData.region,
-          subRegion: wineData.subRegion || null,
-          primaryGrape: wineData.primaryGrape || null,
-          primaryLabelImageUrl: imageUrl,
+          sub_region: wineData.subRegion || null,
+          primary_grape: wineData.primaryGrape || null,
+          primary_label_image_url: imageUrl,
         })
         .select('*');
 
@@ -599,18 +599,18 @@ export async function createBottleFromScan(formData: FormData) {
     const { data: newBottles, error: bottleError } = await supabase
       .from('bottles')
       .insert({
-        userId: user.id,
-        wineId: wineRecord.id,
+        user_id: user.id,
+        wine_id: wineRecord.id,
         quantity: bottleData.quantity,
-        purchasePrice: bottleData.purchasePrice,
+        purchase_price: bottleData.purchasePrice,
         currency: bottleData.currency,
-        purchaseDate: bottleData.purchaseDate ? new Date(bottleData.purchaseDate).toISOString() : null,
-        purchaseLocation: bottleData.purchaseLocation || null,
-        storageLocation: bottleData.storageLocation || null,
+        purchase_date: bottleData.purchaseDate ? new Date(bottleData.purchaseDate).toISOString() : null,
+        purchase_location: bottleData.purchaseLocation || null,
+        storage_location: bottleData.storageLocation || null,
         personalNotes: bottleData.personalNotes || null,
-        labelImageUrl: imageUrl,
+        label_image_url: imageUrl,
         tags: [],
-        acquisitionMethod: bottleData.acquisitionMethod as any,
+        acquisition_method: bottleData.acquisitionMethod as any,
         status: bottleData.status as any,
       })
       .select(`
@@ -628,13 +628,13 @@ export async function createBottleFromScan(formData: FormData) {
     if (createdNewWine) {
       const generated = await generateWineDescription({
         name: wineRecord.name,
-        producerName: wineRecord.producerName,
-        wineType: wineRecord.wineType ? wineRecord.wineType.toString() : undefined,
+        producer_name: wineRecord.producerName,
+        wine_type: wineRecord.wineType ? wineRecord.wineType.toString() : undefined,
         vintage: wineRecord.vintage,
         country: wineRecord.country,
         region: wineRecord.region,
-        subRegion: wineRecord.subRegion,
-        primaryGrape: wineRecord.primaryGrape,
+        sub_region: wineRecord.subRegion,
+        primary_grape: wineRecord.primaryGrape,
       });
 
       if (generated) {
@@ -656,11 +656,11 @@ export async function createBottleFromScan(formData: FormData) {
       const { error: scanError } = await supabase
         .from('label_scans')
         .insert({
-          userId: user.id,
-          bottleId: bottle.id,
+          user_id: user.id,
+          bottle_id: bottle.id,
           imageUrl,
-          extractedData: wineData,
-          userConfirmed: true,
+          extracted_data: wineData,
+          user_confirmed: true,
         });
 
       if (scanError) {
@@ -672,7 +672,7 @@ export async function createBottleFromScan(formData: FormData) {
     revalidatePath('/cellar');
     revalidatePath('/dashboard');
 
-    return { success: true, bottleId: bottle.id };
+    return { success: true, bottle_id: bottle.id };
   } catch (error) {
     console.error('Error creating bottle from scan:', error);
     throw new Error('Failed to create bottle');

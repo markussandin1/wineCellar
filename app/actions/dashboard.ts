@@ -17,7 +17,7 @@ export async function getDashboardStats() {
       *,
       wine:wines(*)
     `)
-    .eq('userId', user.id)
+    .eq('user_id', user.id)
     .eq('status', 'in_cellar');
 
   if (error) {
@@ -45,8 +45,8 @@ export async function getDashboardStats() {
       *,
       wine:wines(*)
     `)
-    .eq('userId', user.id)
-    .order('createdAt', { ascending: false })
+    .eq('user_id', user.id)
+    .order('created_at', { ascending: false })
     .limit(6);
 
   if (recentError) {
