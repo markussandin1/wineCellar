@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
     // Autocomplete for producers
     if (type === 'producer') {
       const { data: wines, error } = await supabase
-        .from('Wine')
+        .from('wines')
         .select('producerName')
         .ilike('producerName', `%${query}%`)
         .limit(10);
@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
     // Autocomplete for wines
     if (type === 'wine') {
       let queryBuilder = supabase
-        .from('Wine')
+        .from('wines')
         .select('id, name, producerName, vintage, wineType, country, region, subRegion, primaryGrape, primaryLabelImageUrl')
         .ilike('name', `%${query}%`);
 

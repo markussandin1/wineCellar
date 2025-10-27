@@ -48,7 +48,7 @@ export async function createBottle(formData: FormData) {
 
     if (validatedData.existingWineId) {
       const { data: wines, error } = await supabase
-        .from('Wine')
+        .from('wines')
         .select('*')
         .eq('id', validatedData.existingWineId);
 
@@ -60,7 +60,7 @@ export async function createBottle(formData: FormData) {
 
       if (labelImageUrl && !wineRecord.primaryLabelImageUrl) {
         const { data: updatedWines, error: updateError } = await supabase
-          .from('Wine')
+          .from('wines')
           .update({ primaryLabelImageUrl: labelImageUrl })
           .eq('id', wineRecord.id)
           .select('*');
@@ -74,7 +74,7 @@ export async function createBottle(formData: FormData) {
     } else {
       console.log('Searching for matching wine...');
       const { data: candidates, error: searchError } = await supabase
-        .from('Wine')
+        .from('wines')
         .select('*')
         .ilike('producerName', `%${validatedData.producerName}%`)
         .limit(20);
@@ -95,7 +95,7 @@ export async function createBottle(formData: FormData) {
       if (match) {
         console.log(`Found matching wine: ${match.wine.name} (${Math.round(match.score * 100)}% match)`);
         const { data: wines, error } = await supabase
-          .from('Wine')
+          .from('wines')
           .select('*')
           .eq('id', match.wine.id);
 
@@ -107,7 +107,7 @@ export async function createBottle(formData: FormData) {
 
         if (labelImageUrl && !wineRecord.primaryLabelImageUrl) {
           const { data: updatedWines, error: updateError } = await supabase
-            .from('Wine')
+            .from('wines')
             .update({ primaryLabelImageUrl: labelImageUrl })
             .eq('id', wineRecord.id)
             .select('*');
@@ -121,7 +121,7 @@ export async function createBottle(formData: FormData) {
       } else {
         console.log('No match found, creating new wine');
         const { data: newWines, error: createError } = await supabase
-          .from('Wine')
+          .from('wines')
           .insert({
             name: validatedData.wineName,
             fullName: `${validatedData.producerName} ${validatedData.wineName} ${validatedData.vintage || 'NV'}`,
@@ -151,7 +151,7 @@ export async function createBottle(formData: FormData) {
     }
 
     const { data: newBottles, error: bottleError } = await supabase
-      .from('Bottle')
+      .from('bottles')
       .insert({
         userId: user.id,
         wineId: wineRecord.id,
@@ -169,7 +169,7 @@ export async function createBottle(formData: FormData) {
       })
       .select(`
         *,
-        wine:Wine(*)
+        wine:wines(*)
       `);
 
     if (bottleError || !newBottles || newBottles.length === 0) {
@@ -193,7 +193,7 @@ export async function createBottle(formData: FormData) {
 
       if (generated) {
         const { error: updateError } = await supabase
-          .from('Wine')
+          .from('wines')
           .update({
             description: generated.description,
             aiGeneratedSummary: generated.summary,
@@ -231,10 +231,10 @@ export async function getBottles(filters?: {
 
   // Build Supabase query
   let query = supabase
-    .from('Bottle')
+    .from('bottles')
     .select(`
       *,
-      wine:Wine(*)
+      wine:wines(*)
     `)
     .eq('userId', user.id);
 
@@ -293,11 +293,11 @@ export async function getBottle(id: string) {
 
   // Get bottle with wine and consumption logs
   const { data: bottles, error } = await supabase
-    .from('Bottle')
+    .from('bottles')
     .select(`
       *,
-      wine:Wine(*),
-      consumptionLogs:ConsumptionLog(*)
+      wine:wines(*),
+      consumptionLogs:consumption_logs(*)
     `)
     .eq('id', id)
     .eq('userId', user.id);
@@ -339,7 +339,7 @@ export async function updateBottle(data: any) {
 
   // Verify ownership
   const { data: existingBottles, error: fetchError } = await supabase
-    .from('Bottle')
+    .from('bottles')
     .select('id')
     .eq('id', validatedData.id)
     .eq('userId', user.id);
@@ -363,12 +363,12 @@ export async function updateBottle(data: any) {
   if (validatedData.status) updateData.status = validatedData.status;
 
   const { data: updatedBottles, error: updateError } = await supabase
-    .from('Bottle')
+    .from('bottles')
     .update(updateData)
     .eq('id', validatedData.id)
     .select(`
       *,
-      wine:Wine(*)
+      wine:wines(*)
     `);
 
   if (updateError || !updatedBottles || updatedBottles.length === 0) {
@@ -403,7 +403,7 @@ export async function deleteBottle(id: string) {
 
   // Verify ownership
   const { data: existingBottles, error: fetchError } = await supabase
-    .from('Bottle')
+    .from('bottles')
     .select('id')
     .eq('id', id)
     .eq('userId', user.id);
@@ -413,7 +413,7 @@ export async function deleteBottle(id: string) {
   }
 
   const { error: deleteError } = await supabase
-    .from('Bottle')
+    .from('bottles')
     .delete()
     .eq('id', id);
 
@@ -439,10 +439,10 @@ export async function consumeBottle(data: any) {
 
   // Verify ownership and get bottle
   const { data: bottles, error: fetchError } = await supabase
-    .from('Bottle')
+    .from('bottles')
     .select(`
       *,
-      wine:Wine(*)
+      wine:wines(*)
     `)
     .eq('id', validatedData.bottleId)
     .eq('userId', user.id);
@@ -455,7 +455,7 @@ export async function consumeBottle(data: any) {
 
   // Create consumption log
   const { error: logError } = await supabase
-    .from('ConsumptionLog')
+    .from('consumption_logs')
     .insert({
       bottleId: validatedData.bottleId,
       userId: user.id,
@@ -478,7 +478,7 @@ export async function consumeBottle(data: any) {
   const newQuantity = bottle.quantity - validatedData.quantityConsumed;
 
   const { error: updateError } = await supabase
-    .from('Bottle')
+    .from('bottles')
     .update({
       quantity: newQuantity,
       status: newQuantity === 0 ? 'consumed' : 'in_cellar',
@@ -541,7 +541,7 @@ export async function createBottleFromScan(formData: FormData) {
 
     if (existingWineId) {
       const { data: wines, error } = await supabase
-        .from('Wine')
+        .from('wines')
         .select('*')
         .eq('id', existingWineId as string);
 
@@ -553,7 +553,7 @@ export async function createBottleFromScan(formData: FormData) {
 
       if (imageUrl && !wineRecord.primaryLabelImageUrl) {
         const { data: updatedWines, error: updateError } = await supabase
-          .from('Wine')
+          .from('wines')
           .update({ primaryLabelImageUrl: imageUrl })
           .eq('id', wineRecord.id)
           .select('*');
@@ -567,7 +567,7 @@ export async function createBottleFromScan(formData: FormData) {
       }
     } else {
       const { data: newWines, error: createError } = await supabase
-        .from('Wine')
+        .from('wines')
         .insert({
           name: wineData.wineName,
           fullName: `${wineData.producerName} ${wineData.wineName} ${wineData.vintage || 'NV'}`,
@@ -597,7 +597,7 @@ export async function createBottleFromScan(formData: FormData) {
     }
 
     const { data: newBottles, error: bottleError } = await supabase
-      .from('Bottle')
+      .from('bottles')
       .insert({
         userId: user.id,
         wineId: wineRecord.id,
@@ -615,7 +615,7 @@ export async function createBottleFromScan(formData: FormData) {
       })
       .select(`
         *,
-        wine:Wine(*)
+        wine:wines(*)
       `);
 
     if (bottleError || !newBottles || newBottles.length === 0) {
@@ -639,7 +639,7 @@ export async function createBottleFromScan(formData: FormData) {
 
       if (generated) {
         const { error: updateError } = await supabase
-          .from('Wine')
+          .from('wines')
           .update({
             description: generated.description,
             aiGeneratedSummary: generated.summary,
@@ -654,7 +654,7 @@ export async function createBottleFromScan(formData: FormData) {
 
     if (imageUrl) {
       const { error: scanError } = await supabase
-        .from('LabelScan')
+        .from('label_scans')
         .insert({
           userId: user.id,
           bottleId: bottle.id,

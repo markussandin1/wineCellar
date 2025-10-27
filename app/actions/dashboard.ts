@@ -12,10 +12,10 @@ export async function getDashboardStats() {
 
   // Get all bottles for the user using Supabase Data API
   const { data: bottles, error } = await supabase
-    .from('Bottle')
+    .from('bottles')
     .select(`
       *,
-      wine:Wine(*)
+      wine:wines(*)
     `)
     .eq('userId', user.id)
     .eq('status', 'in_cellar');
@@ -40,10 +40,10 @@ export async function getDashboardStats() {
 
   // Get recent additions (last 6 bottles added) using Supabase Data API
   const { data: recentBottles, error: recentError } = await supabase
-    .from('Bottle')
+    .from('bottles')
     .select(`
       *,
-      wine:Wine(*)
+      wine:wines(*)
     `)
     .eq('userId', user.id)
     .order('createdAt', { ascending: false })

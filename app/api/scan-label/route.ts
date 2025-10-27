@@ -130,7 +130,7 @@ Only return the JSON object, nothing else. Be as accurate as possible.`,
     // Step 2: Search for existing wine in database using Supabase Data API
     console.log('Searching for existing wine in database...');
     const { data: existingWines, error: searchError } = await supabase
-      .from('Wine')
+      .from('wines')
       .select('*')
       .ilike('producerName', `%${extracted.producerName}%`)
       .limit(10);
