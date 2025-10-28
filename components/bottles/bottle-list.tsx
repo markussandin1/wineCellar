@@ -29,8 +29,10 @@ type Bottle = {
   } | null;
 };
 
+export type ViewMode = 'grid-3' | 'grid-6' | 'list';
+
 export function BottleList({ bottles }: { bottles: Bottle[] }) {
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [viewMode, setViewMode] = useState<ViewMode>('grid-3');
 
   const getStatusBadge = (status: string) => {
     const styles = {
@@ -66,12 +68,23 @@ export function BottleList({ bottles }: { bottles: Bottle[] }) {
     return colors[type as keyof typeof colors] || 'text-gray-600';
   };
 
+  const getGridColumns = () => {
+    switch (viewMode) {
+      case 'grid-3':
+        return 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3';
+      case 'grid-6':
+        return 'grid-cols-2 md:grid-cols-4 lg:grid-cols-6';
+      default:
+        return '';
+    }
+  };
+
   return (
     <div className="space-y-6">
       <BottleFilters viewMode={viewMode} setViewMode={setViewMode} totalCount={bottles.length} />
 
-      {viewMode === 'grid' ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {viewMode !== 'list' ? (
+        <div className={`grid ${getGridColumns()} gap-6`}>
           {bottles.map((bottle) => (
             <Link
               key={bottle.id}

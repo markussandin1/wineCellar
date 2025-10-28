@@ -3,6 +3,7 @@
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Search, Grid3x3, List } from 'lucide-react';
 import { useState } from 'react';
+import type { ViewMode } from './bottle-list';
 
 const WINE_TYPES = ['all', 'red', 'white', 'rose', 'sparkling', 'dessert', 'fortified'];
 const STATUSES = [
@@ -11,8 +12,6 @@ const STATUSES = [
   { value: 'consumed', label: 'Consumed' },
   { value: 'watchlist', label: 'Watch List' },
 ];
-
-type ViewMode = 'grid' | 'list';
 
 export function BottleFilters({
   viewMode,
@@ -120,10 +119,17 @@ export function BottleFilters({
           <span className="text-sm text-muted-foreground">{totalCount} bottles</span>
           <div className="flex gap-1 rounded-md border p-1">
             <button
-              onClick={() => setViewMode('grid')}
-              className={`p-1.5 rounded ${viewMode === 'grid' ? 'bg-primary text-primary-foreground' : 'hover:bg-accent'}`}
+              onClick={() => {
+                // Toggle between grid sizes: 3 <-> 6
+                if (viewMode === 'grid-3') setViewMode('grid-6');
+                else setViewMode('grid-3');
+              }}
+              className={`p-1.5 rounded flex items-center gap-1 ${viewMode !== 'list' ? 'bg-primary text-primary-foreground' : 'hover:bg-accent'}`}
             >
               <Grid3x3 className="h-4 w-4" />
+              <span className="text-xs font-medium">
+                {viewMode === 'grid-6' ? '6' : '3'}
+              </span>
             </button>
             <button
               onClick={() => setViewMode('list')}
