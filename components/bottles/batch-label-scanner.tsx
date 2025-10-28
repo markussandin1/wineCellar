@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Upload, Loader2, X, Check, AlertCircle, ChevronRight } from 'lucide-react';
 import Image from 'next/image';
 import { ScannedBottleForm } from './scanned-bottle-form';
@@ -52,6 +52,7 @@ export function BatchLabelScanner({ initialPlacement, userCurrency }: BatchLabel
   const [currentReviewIndex, setCurrentReviewIndex] = useState<number | null>(null);
   const [isScanning, setIsScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFilesSelect = (files: FileList) => {
@@ -184,16 +185,24 @@ export function BatchLabelScanner({ initialPlacement, userCurrency }: BatchLabel
       idx === currentReviewIndex ? { ...it, status: 'added' } : it
     ));
 
-    // Find next ready item
-    const nextReady = items.findIndex((it, idx) =>
-      idx > currentReviewIndex && it.status === 'ready'
-    );
+    // Show success message
+    setShowSuccessMessage(true);
 
-    if (nextReady !== -1) {
-      setCurrentReviewIndex(nextReady);
-    } else {
-      setCurrentReviewIndex(null);
-    }
+    // Hide success message and move to next after 1.5 seconds
+    setTimeout(() => {
+      setShowSuccessMessage(false);
+
+      // Find next ready item
+      const nextReady = items.findIndex((it, idx) =>
+        idx > currentReviewIndex && it.status === 'ready'
+      );
+
+      if (nextReady !== -1) {
+        setCurrentReviewIndex(nextReady);
+      } else {
+        setCurrentReviewIndex(null);
+      }
+    }, 1500);
   };
 
   const handleRemoveItem = (id: string) => {
@@ -242,6 +251,29 @@ export function BatchLabelScanner({ initialPlacement, userCurrency }: BatchLabel
   if (currentReviewIndex !== null && items[currentReviewIndex]?.extractedData) {
     const currentItem = items[currentReviewIndex];
     const remainingCount = items.filter(it => it.status === 'ready').length;
+
+    // Show success overlay
+    if (showSuccessMessage) {
+      return (
+        <div className="rounded-lg border bg-card p-12">
+          <div className="flex flex-col items-center justify-center space-y-4">
+            <div className="rounded-full bg-green-500 p-4 animate-bounce">
+              <Check className="h-12 w-12 text-white" />
+            </div>
+            <div className="text-center">
+              <h3 className="text-xl font-semibold text-green-600 dark:text-green-400">
+                Bottle Added Successfully!
+              </h3>
+              <p className="text-sm text-muted-foreground mt-2">
+                {remainingCount > 1
+                  ? `Loading next bottle... (${remainingCount - 1} more to review)`
+                  : 'All done! Returning to queue...'}
+              </p>
+            </div>
+          </div>
+        </div>
+      );
+    }
 
     return (
       <div className="space-y-4">

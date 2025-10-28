@@ -188,6 +188,9 @@ model Bottle {
   userId           String   @map("user_id")
   wineId           String?  @map("wine_id")
 
+  // Bottle specifications
+  bottleSize       Int      @default(750) @map("bottle_size") // Size in ml (750, 1500, etc.)
+
   // Purchase & Ownership
   quantity         Int      @default(1)
   purchasePrice    Decimal? @map("purchase_price") @db.Decimal(10, 2)
@@ -217,6 +220,7 @@ model Bottle {
   consumptionLogs  ConsumptionLog[]
   labelScans       LabelScan[]
 
+  @@index([wineId, bottleSize])
   @@map("bottles")
 }
 

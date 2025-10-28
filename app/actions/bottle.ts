@@ -29,6 +29,7 @@ export async function createBottle(formData: FormData) {
     region: formData.get('region'),
     subRegion: formData.get('subRegion') || '',
     primaryGrape: formData.get('primaryGrape') || '',
+    bottleSize: formData.get('bottleSize') || 750,
     quantity: formData.get('quantity') || 1,
     purchasePrice: formData.get('purchasePrice') || undefined,
     currency: formData.get('currency') || 'USD',
@@ -165,6 +166,7 @@ export async function createBottle(formData: FormData) {
       .insert({
         user_id: user.id,
         wine_id: wineRecord.id,
+        bottle_size: validatedData.bottleSize,
         quantity: validatedData.quantity,
         purchase_price: validatedData.purchasePrice ? String(validatedData.purchasePrice) : null,
         currency: validatedData.currency,
@@ -274,7 +276,31 @@ export async function getBottles(filters?: {
 
   // Apply search filter (search in wine name or producer name)
   if (filters?.search) {
-    query = query.or(`wine.name.ilike.%${filters.search}%,wine.producer_name.ilike.%${filters.search}%`);
+    const searchTerm = filters.search.trim();
+    if (searchTerm) {
+      const escapeLike = (value: string) =>
+        value.replace(/[%_]/g, (match) => `\\${match}`);
+
+      const likePattern = `%${escapeLike(searchTerm)}%`;
+
+      const { data: matchingWines, error: wineSearchError } = await supabase
+        .from('wines')
+        .select('id')
+        .or(`name.ilike.${likePattern},producer_name.ilike.${likePattern}`);
+
+      if (wineSearchError) {
+        console.error('Error searching wines for bottle filter:', wineSearchError);
+        throw new Error('Failed to search wines');
+      }
+
+      const wineIds = (matchingWines || []).map((wine) => wine.id);
+
+      if (wineIds.length === 0) {
+        return [];
+      }
+
+      query = query.in('wine_id', wineIds);
+    }
   }
 
   // Order by creation date
@@ -523,6 +549,7 @@ export async function createBottleFromScan(formData: FormData) {
 
   // Parse bottle data
   const bottleData = {
+    bottleSize: Number(formData.get('bottleSize')) || 750,
     quantity: Number(formData.get('quantity')) || 1,
     purchasePrice: formData.get('purchasePrice') ? String(formData.get('purchasePrice')) : null,
     currency: (formData.get('currency') as string) || 'SEK',
@@ -595,11 +622,12 @@ export async function createBottleFromScan(formData: FormData) {
       throw new Error('Could not create or locate wine record');
     }
 
-    const { data: newBottles, error: bottleError } = await supabase
+    const { data: newBottles, error: bottleError} = await supabase
       .from('bottles')
       .insert({
         user_id: user.id,
         wine_id: wineRecord.id,
+        bottle_size: bottleData.bottleSize,
         quantity: bottleData.quantity,
         purchase_price: bottleData.purchasePrice,
         currency: bottleData.currency,

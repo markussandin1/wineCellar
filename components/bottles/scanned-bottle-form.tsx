@@ -21,6 +21,14 @@ const ACQUISITION_METHODS = [
   { value: 'other', label: 'Other' },
 ];
 
+const BOTTLE_SIZES = [
+  { value: 375, label: 'Half Bottle (375ml)' },
+  { value: 750, label: 'Standard (750ml)' },
+  { value: 1500, label: 'Magnum (1.5L)' },
+  { value: 3000, label: 'Double Magnum (3L)' },
+  { value: 6000, label: 'Imperial (6L)' },
+];
+
 interface ScannedBottleFormProps {
   extractedData: {
     wineName: string;
@@ -336,7 +344,26 @@ export function ScannedBottleForm({ extractedData, onBack, onSuccess, initialPla
       <div className="space-y-4">
         <h2 className="text-lg font-semibold">Your Bottle Details</h2>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label htmlFor="bottleSize" className="block text-sm font-medium mb-2">
+              Bottle Size *
+            </label>
+            <select
+              id="bottleSize"
+              name="bottleSize"
+              defaultValue="750"
+              required
+              className="w-full rounded-md border bg-background px-3 py-2"
+            >
+              {BOTTLE_SIZES.map((size) => (
+                <option key={size.value} value={size.value}>
+                  {size.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
           <div>
             <label htmlFor="quantity" className="block text-sm font-medium mb-2">
               Quantity{isWatchList ? '' : ' *'}

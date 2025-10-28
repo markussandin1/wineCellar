@@ -14,6 +14,7 @@ export const bottleSchema = z.object({
   primaryGrape: z.string().optional(),
 
   // Bottle-specific information
+  bottleSize: z.coerce.number().int().positive().default(750), // Size in ml
   quantity: z.coerce.number().int().min(0).default(1),
   purchasePrice: z.coerce.number().positive().optional(),
   currency: z.string().default('USD'),
