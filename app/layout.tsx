@@ -7,8 +7,8 @@ const inter = Inter({ subsets: ["latin"] });
 const isPwaEnabled = process.env.NEXT_PUBLIC_ENABLE_PWA === "true";
 
 export const metadata: Metadata = {
-  title: "Wine Cellar - AI-Powered Wine Collection Manager",
-  description: "Track your wine collection effortlessly with AI label scanning and smart insights",
+  title: "Wine Cellar - A Wine Collection Manager",
+  description: "Track your wine collection effortlessly with label scanning and smart insights",
   manifest: "/manifest.json",
   viewport: {
     width: "device-width",
