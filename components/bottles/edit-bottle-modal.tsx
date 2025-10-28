@@ -8,6 +8,7 @@ import { X, Upload, Trash2 } from 'lucide-react';
 
 type Bottle = {
   id: string;
+  bottleSize?: number;
   quantity: number;
   purchasePrice: string | null;
   currency: string | null;
@@ -25,6 +26,14 @@ const STATUS_OPTIONS = [
   { value: 'in_cellar', label: 'In cellar' },
   { value: 'consumed', label: 'Consumed' },
   { value: 'other', label: 'Watch list' },
+];
+
+const BOTTLE_SIZES = [
+  { value: 375, label: 'Half Bottle (375ml)' },
+  { value: 750, label: 'Standard (750ml)' },
+  { value: 1500, label: 'Magnum (1.5L)' },
+  { value: 3000, label: 'Double Magnum (3L)' },
+  { value: 6000, label: 'Imperial (6L)' },
 ];
 
 export function EditBottleModal({
@@ -100,6 +109,7 @@ export function EditBottleModal({
 
       const data = {
         id: bottle.id,
+        bottleSize: formData.get('bottleSize') ? Number(formData.get('bottleSize')) : undefined,
         quantity: formData.get('quantity') ? Number(formData.get('quantity')) : undefined,
         purchasePrice: formData.get('purchasePrice') ? Number(formData.get('purchasePrice')) : undefined,
         currency: formData.get('currency') as string || undefined,
@@ -182,7 +192,25 @@ export function EditBottleModal({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label htmlFor="bottleSize" className="block text-sm font-medium mb-2">
+                Bottle Size
+              </label>
+              <select
+                id="bottleSize"
+                name="bottleSize"
+                defaultValue={bottle.bottleSize || 750}
+                className="w-full rounded-md border bg-background px-3 py-2"
+              >
+                {BOTTLE_SIZES.map((size) => (
+                  <option key={size.value} value={size.value}>
+                    {size.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
             <div>
               <label htmlFor="quantity" className="block text-sm font-medium mb-2">
                 Quantity

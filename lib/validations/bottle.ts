@@ -40,6 +40,7 @@ export const consumeBottleSchema = z.object({
 
 export const editBottleSchema = z.object({
   id: z.string().uuid(),
+  bottleSize: z.coerce.number().int().positive().optional(),
   quantity: z.coerce.number().int().min(0).optional(),
   purchasePrice: z.coerce.number().positive().optional(),
   currency: z.string().optional(),

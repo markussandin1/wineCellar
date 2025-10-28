@@ -381,6 +381,7 @@ export async function updateBottle(data: any) {
 
   const updateData: any = {};
 
+  if (validatedData.bottleSize !== undefined) updateData.bottle_size = validatedData.bottleSize;
   if (validatedData.quantity !== undefined) updateData.quantity = validatedData.quantity;
   if (validatedData.purchasePrice !== undefined) updateData.purchase_price = String(validatedData.purchasePrice);
   if (validatedData.currency) updateData.currency = validatedData.currency;
