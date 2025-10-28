@@ -35,7 +35,7 @@ export default async function Home() {
         </div>
         <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
           <div className="rounded-lg border bg-card p-6">
-            <h3 className="font-semibold mb-2">AI Label Scanning</h3>
+            <h3 className="font-semibold mb-2">Label Scanning</h3>
             <p className="text-sm text-muted-foreground">
               Snap a photo of any wine label and extract all the details automatically
             </p>
