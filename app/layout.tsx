@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { ServiceWorkerManager } from "@/components/pwa/service-worker-manager";
@@ -10,12 +10,15 @@ export const metadata: Metadata = {
   title: "Wine Cellar - AI-Powered Wine Collection Manager",
   description: "Track your wine collection effortlessly with AI label scanning and smart insights",
   manifest: "/manifest.json",
-  themeColor: "#000000",
   viewport: {
     width: "device-width",
     initialScale: 1,
     maximumScale: 1,
   },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#000000",
 };
 
 export default function RootLayout({

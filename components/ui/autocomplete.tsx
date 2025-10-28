@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import type { ReactNode, Ref } from 'react';
 import { Search, Loader2 } from 'lucide-react';
 
 interface AutocompleteProps {
@@ -10,9 +11,11 @@ interface AutocompleteProps {
   onChange: (value: string) => void;
   onSelect?: (item: any) => void;
   fetchSuggestions: (query: string) => Promise<any[]>;
+  onBlur?: () => void;
+  inputRef?: Ref<HTMLInputElement>;
   placeholder?: string;
   required?: boolean;
-  renderSuggestion?: (item: any) => React.ReactNode;
+  renderSuggestion?: (item: any) => ReactNode;
   getSuggestionValue?: (item: any) => string;
   minChars?: number;
   debounceMs?: number;
@@ -26,6 +29,8 @@ export function Autocomplete({
   onChange,
   onSelect,
   fetchSuggestions,
+  onBlur,
+  inputRef,
   placeholder,
   required = false,
   renderSuggestion,
@@ -130,6 +135,7 @@ export function Autocomplete({
           type="text"
           value={safeValue}
           onChange={(e) => onChange(e.target.value)}
+          onBlur={onBlur}
           onKeyDown={handleKeyDown}
           onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
           placeholder={placeholder}
@@ -137,6 +143,7 @@ export function Autocomplete({
           disabled={disabled}
           className="w-full rounded-md border bg-background px-3 py-2 pr-10"
           autoComplete="off"
+          ref={inputRef}
         />
         <div className="absolute right-3 top-1/2 -translate-y-1/2">
           {isLoading ? (

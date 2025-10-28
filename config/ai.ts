@@ -56,8 +56,8 @@ function buildFactsSection(input: WineDescriptionPromptInput): string {
 }
 
 export const wineDescriptionConfig: WineDescriptionConfig = {
-  model: process.env.WINE_DESCRIPTION_MODEL ?? 'gpt-4o-mini',
-  temperature: 0.6,
+  model: process.env.WINE_DESCRIPTION_MODEL ?? 'gpt-4.1-mini',
+  temperature: 0.2,
   maxTokens: 700,
   systemPrompt:
     'You are a seasoned sommelier and wine writer. Write with confident, authoritative tone without referencing AI or speculation. Follow established wine journalism standards and keep the prose sensory, concrete, and useful for wine lovers.',
@@ -116,7 +116,7 @@ export const labelScanConfig: LabelScanConfig = {
   "confidence": "your overall confidence level as a decimal 0-1"
 }
 
-IMPORTANT: Always estimate the price in EUR (Euros), regardless of the wine's origin country. EUR is the standard currency for wine pricing globally.
+IMPORTANT: Always estimate the price in EUR (Euros), regardless of the wine's origin country. EUR is the standard currency for wine pricing globally. Use systembolaget.se for prices.
 
 For price estimation, consider:
 - Producer reputation and classification (e.g., Grand Cru, Premier Cru, DOC, DOCG)

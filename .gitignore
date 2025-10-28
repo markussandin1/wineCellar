@@ -73,3 +73,6 @@ prisma/*.db-journal
 /public/uploads
 
 /lib/generated/prisma
+
+# Local review notes
+CODE_REVIEW_FINDINGS.md

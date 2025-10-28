@@ -5,9 +5,12 @@ import { bottleSchema, consumeBottleSchema, editBottleSchema } from '@/lib/valid
 import { findBestWineMatch } from '@/lib/utils/wine-matching';
 import { generateWineDescription } from '@/lib/ai/wine-description';
 import { revalidatePath } from 'next/cache';
+import { unstable_after as after } from 'next/server';
 import { redirect } from 'next/navigation';
 import { normalizeBottleRecord } from '@/lib/utils/supabase-normalize';
 import { ensureUserRecord } from '@/lib/utils/supabase-users';
+
+const WINE_SELECT_FIELDS = 'id,name,producer_name,wine_type,vintage,country,region,sub_region,primary_grape,primary_label_image_url';
 
 export async function createBottle(formData: FormData) {
   const supabase = await createClient();
@@ -52,35 +55,35 @@ export async function createBottle(formData: FormData) {
     let createdNewWine = false;
 
     if (validatedData.existingWineId) {
-      const { data: wines, error } = await supabase
+      const { data: existingWine, error: existingWineError } = await supabase
         .from('wines')
-        .select('*')
-        .eq('id', validatedData.existingWineId);
+        .select(WINE_SELECT_FIELDS)
+        .eq('id', validatedData.existingWineId)
+        .maybeSingle();
 
-      if (error || !wines || wines.length === 0) {
+      if (existingWineError || !existingWine) {
         throw new Error('Selected wine could not be found');
       }
 
-      wineRecord = wines[0];
+      wineRecord = existingWine;
 
-      if (labelImageUrl && !wineRecord.primary_label_image_url) {
-        const { data: updatedWines, error: updateError } = await supabase
+      if (labelImageUrl && !existingWine.primary_label_image_url) {
+        const { error: updateError } = await supabase
           .from('wines')
           .update({ primary_label_image_url: labelImageUrl })
-          .eq('id', wineRecord.id)
-          .select('*');
+          .eq('id', existingWine.id);
 
         if (updateError) {
           console.error('Error updating wine image:', updateError);
-        } else if (updatedWines && updatedWines.length > 0) {
-          wineRecord = updatedWines[0];
+        } else {
+          wineRecord = { ...existingWine, primary_label_image_url: labelImageUrl };
         }
       }
     } else {
       console.log('Searching for matching wine...');
       const { data: candidates, error: searchError } = await supabase
         .from('wines')
-        .select('*')
+        .select(WINE_SELECT_FIELDS)
         .ilike('producer_name', `%${validatedData.producerName}%`)
         .limit(20);
 
@@ -88,8 +91,10 @@ export async function createBottle(formData: FormData) {
         console.error('Error searching for wines:', searchError);
       }
 
+      const candidateList = candidates || [];
+
       // Map snake_case from DB to camelCase for wine matching
-      const mappedCandidates = (candidates || []).map(wine => ({
+      const mappedCandidates = candidateList.map((wine) => ({
         ...wine,
         producerName: wine.producer_name,
       }));
@@ -104,34 +109,32 @@ export async function createBottle(formData: FormData) {
       );
 
       if (match) {
-        console.log(`Found matching wine: ${match.wine.name} (${Math.round(match.score * 100)}% match)`);
-        const { data: wines, error } = await supabase
-          .from('wines')
-          .select('*')
-          .eq('id', match.wine.id);
+        console.log(
+          `Found matching wine: ${match.wine.name} (${Math.round(match.score * 100)}% match)`
+        );
+        const matchedWine = candidateList.find((wine) => wine.id === match.wine.id);
 
-        if (error || !wines || wines.length === 0) {
+        if (!matchedWine) {
           throw new Error('Matched wine could not be retrieved');
         }
 
-        wineRecord = wines[0];
+        wineRecord = matchedWine;
 
-      if (labelImageUrl && !wineRecord.primary_label_image_url) {
-          const { data: updatedWines, error: updateError } = await supabase
+        if (labelImageUrl && !matchedWine.primary_label_image_url) {
+          const { error: updateError } = await supabase
             .from('wines')
             .update({ primary_label_image_url: labelImageUrl })
-            .eq('id', wineRecord.id)
-            .select('*');
+            .eq('id', matchedWine.id);
 
           if (updateError) {
             console.error('Error updating wine image:', updateError);
-          } else if (updatedWines && updatedWines.length > 0) {
-            wineRecord = updatedWines[0];
+          } else {
+            wineRecord = { ...matchedWine, primary_label_image_url: labelImageUrl };
           }
         }
       } else {
         console.log('No match found, creating new wine');
-        const { data: newWines, error: createError } = await supabase
+        const { data: newWine, error: createError } = await supabase
           .from('wines')
           .insert({
             name: validatedData.wineName,
@@ -145,14 +148,15 @@ export async function createBottle(formData: FormData) {
             primary_grape: validatedData.primaryGrape || null,
             primary_label_image_url: labelImageUrl || null,
           })
-          .select('*');
+          .select(WINE_SELECT_FIELDS)
+          .single();
 
-      if (createError || !newWines || newWines.length === 0) {
-        console.error('Error creating wine:', createError);
-        throw new Error(createError?.message || 'Failed to create wine');
-      }
+        if (createError || !newWine) {
+          console.error('Error creating wine:', createError);
+          throw new Error(createError?.message || 'Failed to create wine');
+        }
 
-        wineRecord = newWines[0];
+        wineRecord = newWine;
         createdNewWine = true;
       }
     }
@@ -161,7 +165,7 @@ export async function createBottle(formData: FormData) {
       throw new Error('Could not determine which wine this bottle belongs to');
     }
 
-    const { data: newBottles, error: bottleError } = await supabase
+    const { data: bottleRow, error: bottleError } = await supabase
       .from('bottles')
       .insert({
         user_id: user.id,
@@ -170,7 +174,9 @@ export async function createBottle(formData: FormData) {
         quantity: validatedData.quantity,
         purchase_price: validatedData.purchasePrice ? String(validatedData.purchasePrice) : null,
         currency: validatedData.currency,
-        purchase_date: validatedData.purchaseDate ? new Date(validatedData.purchaseDate).toISOString() : null,
+        purchase_date: validatedData.purchaseDate
+          ? new Date(validatedData.purchaseDate).toISOString()
+          : null,
         purchase_location: validatedData.purchaseLocation || null,
         storage_location: validatedData.storageLocation || null,
         personal_notes: validatedData.personalNotes || null,
@@ -179,49 +185,52 @@ export async function createBottle(formData: FormData) {
         acquisition_method: validatedData.acquisitionMethod,
         status: validatedData.status,
       })
-      .select(`
-        *,
-        wine:wines(*)
-      `);
+      .select('id')
+      .single();
 
-    if (bottleError || !newBottles || newBottles.length === 0) {
+    if (bottleError || !bottleRow) {
       console.error('Error creating bottle:', bottleError);
       throw new Error(bottleError?.message || 'Failed to create bottle');
     }
 
-    const bottle = newBottles[0];
-
     if (createdNewWine) {
-      const generated = await generateWineDescription({
-        name: wineRecord.name,
-        producerName: wineRecord.producer_name,
-        wineType: wineRecord.wine_type ? wineRecord.wine_type.toString() : undefined,
-        vintage: wineRecord.vintage,
-        country: wineRecord.country,
-        region: wineRecord.region,
-        subRegion: wineRecord.sub_region,
-        primaryGrape: wineRecord.primary_grape,
-      });
+      const wineId = wineRecord.id;
+      after(async () => {
+        try {
+          const generated = await generateWineDescription({
+            name: wineRecord.name,
+            producerName: wineRecord.producer_name,
+            wineType: wineRecord.wine_type ? wineRecord.wine_type.toString() : undefined,
+            vintage: wineRecord.vintage,
+            country: wineRecord.country,
+            region: wineRecord.region,
+            subRegion: wineRecord.sub_region,
+            primaryGrape: wineRecord.primary_grape,
+          });
 
-      if (generated) {
-        const { error: updateError } = await supabase
-          .from('wines')
-          .update({
-            description: generated.description,
-            ai_generated_summary: generated.summary,
-          })
-          .eq('id', wineRecord.id);
+          if (!generated) return;
 
-        if (updateError) {
-          console.error('Error updating wine with AI description:', updateError);
+          const { error: updateError } = await supabase
+            .from('wines')
+            .update({
+              description: generated.description,
+              ai_generated_summary: generated.summary,
+            })
+            .eq('id', wineId);
+
+          if (updateError) {
+            console.error('Error updating wine with AI description:', updateError);
+          }
+        } catch (backgroundError) {
+          console.error('Error generating AI description:', backgroundError);
         }
-      }
+      });
     }
 
     revalidatePath('/cellar');
     revalidatePath('/dashboard');
 
-    return { success: true, bottle_id: bottle.id };
+    return { success: true, bottle_id: bottleRow.id };
   } catch (error) {
     console.error('Error creating bottle:', error);
     return {
@@ -686,7 +695,7 @@ export async function createBottleFromScan(formData: FormData) {
         .insert({
           user_id: user.id,
           bottle_id: bottle.id,
-          imageUrl,
+          image_url: imageUrl,
           extracted_data: wineData,
           user_confirmed: true,
         });

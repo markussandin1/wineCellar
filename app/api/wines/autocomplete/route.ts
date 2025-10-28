@@ -59,7 +59,21 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: 'Failed to fetch wines' }, { status: 500 });
       }
 
-      return NextResponse.json({ results: wines || [] });
+      // Transform snake_case to camelCase for frontend
+      const transformedWines = (wines || []).map((wine) => ({
+        id: wine.id,
+        name: wine.name,
+        producerName: wine.producer_name,
+        vintage: wine.vintage,
+        wineType: wine.wine_type,
+        country: wine.country,
+        region: wine.region,
+        subRegion: wine.sub_region,
+        primaryGrape: wine.primary_grape,
+        primaryLabelImageUrl: wine.primary_label_image_url,
+      }));
+
+      return NextResponse.json({ results: transformedWines });
     }
 
     return NextResponse.json({ error: 'Invalid type parameter' }, { status: 400 });
