@@ -76,3 +76,6 @@ prisma/*.db-journal
 
 # Local review notes
 CODE_REVIEW_FINDINGS.md
+
+# data files
+brazilian_wine_data.json

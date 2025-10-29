@@ -67,6 +67,15 @@ export function BottleDetail({ bottle }: { bottle: Bottle }) {
     other: 'Watch list',
   };
 
+  // Format date consistently for SSR hydration
+  const formatDate = (date: Date) => {
+    return new Intl.DateTimeFormat('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    }).format(new Date(date));
+  };
+
   const parsedDescription = useMemo<DescriptionBlock[]>(() => {
     const description = bottle.wine?.description;
     if (!description) return [];
@@ -169,7 +178,7 @@ export function BottleDetail({ bottle }: { bottle: Bottle }) {
           </div>
         )}
 
-        {/* Wine Information */}
+        {/* Wine Header */}
         <div className="rounded-lg border bg-card p-6">
           <div className="flex items-start gap-4 mb-6">
             <Wine className={`h-12 w-12 ${bottle.wine ? getWineTypeColor(bottle.wine.wineType) : 'text-gray-400'}`} />
@@ -212,48 +221,7 @@ export function BottleDetail({ bottle }: { bottle: Bottle }) {
           </div>
         </div>
 
-        {parsedDescription.length > 0 && (
-          <div className="rounded-lg border bg-card p-6">
-            <h2 className="text-xl font-semibold mb-4">Wine Profile</h2>
-            <div className="space-y-4 text-sm leading-relaxed text-foreground/80">
-              {parsedDescription.map((block, index) => {
-                if (block.type === 'paragraph') {
-                  return (
-                    <p key={index} className="text-base">
-                      {block.body}
-                    </p>
-                  );
-                }
-
-                if (block.type === 'section') {
-                  return (
-                    <div key={index} className="space-y-2">
-                      <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                        {block.title}
-                      </h3>
-                      <p className="whitespace-pre-line text-base">{block.body}</p>
-                    </div>
-                  );
-                }
-
-                return (
-                  <div key={index} className="space-y-2">
-                    <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                      {block.title}
-                    </h3>
-                    <ul className="list-disc list-inside space-y-1">
-                      {block.items?.map((item, idx) => (
-                        <li key={idx}>{item}</li>
-                      ))}
-                    </ul>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* Bottle Details */}
+        {/* Bottle Details - Your cellar information */}
         <div className="rounded-lg border bg-card p-6">
           <h2 className="text-xl font-semibold mb-4">Bottle Details</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -277,7 +245,7 @@ export function BottleDetail({ bottle }: { bottle: Bottle }) {
             {bottle.purchaseDate && (
               <div>
                 <div className="text-sm font-medium text-muted-foreground mb-1">Purchase Date</div>
-                <div>{new Date(bottle.purchaseDate).toLocaleDateString()}</div>
+                <div>{formatDate(bottle.purchaseDate)}</div>
               </div>
             )}
             {bottle.purchaseLocation && (
@@ -332,6 +300,48 @@ export function BottleDetail({ bottle }: { bottle: Bottle }) {
           )}
         </div>
 
+        {/* Wine Profile - Detailed description */}
+        {parsedDescription.length > 0 && (
+          <div className="rounded-lg border bg-card p-6">
+            <h2 className="text-xl font-semibold mb-4">Wine Profile</h2>
+            <div className="space-y-4 text-sm leading-relaxed text-foreground/80">
+              {parsedDescription.map((block, index) => {
+                if (block.type === 'paragraph') {
+                  return (
+                    <p key={index} className="text-base">
+                      {block.body}
+                    </p>
+                  );
+                }
+
+                if (block.type === 'section') {
+                  return (
+                    <div key={index} className="space-y-2">
+                      <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                        {block.title}
+                      </h3>
+                      <p className="whitespace-pre-line text-base">{block.body}</p>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div key={index} className="space-y-2">
+                    <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                      {block.title}
+                    </h3>
+                    <ul className="list-disc list-inside space-y-1">
+                      {block.items?.map((item, idx) => (
+                        <li key={idx}>{item}</li>
+                      ))}
+                    </ul>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* Consumption History */}
         {bottle.consumptionLogs.length > 0 && (
           <div className="rounded-lg border bg-card p-6">
@@ -340,7 +350,7 @@ export function BottleDetail({ bottle }: { bottle: Bottle }) {
               {bottle.consumptionLogs.map((log) => (
                 <div key={log.id} className="border-l-2 border-primary pl-4">
                   <div className="flex justify-between items-start mb-1">
-                    <div className="font-medium">{new Date(log.consumedDate).toLocaleDateString()}</div>
+                    <div className="font-medium">{formatDate(log.consumedDate)}</div>
                     {log.rating && (
                       <div className="flex gap-1">
                         {Array.from({ length: 5 }).map((_, i) => (
