@@ -5,7 +5,6 @@ import { bottleSchema, consumeBottleSchema, editBottleSchema } from '@/lib/valid
 import { findBestWineMatch } from '@/lib/utils/wine-matching';
 import { generateWineDescription } from '@/lib/ai/wine-description';
 import { revalidatePath } from 'next/cache';
-import { unstable_after as after } from 'next/server';
 import { redirect } from 'next/navigation';
 import { normalizeBottleRecord } from '@/lib/utils/supabase-normalize';
 import { ensureUserRecord } from '@/lib/utils/supabase-users';
@@ -195,7 +194,8 @@ export async function createBottle(formData: FormData) {
 
     if (createdNewWine) {
       const wineId = wineRecord.id;
-      after(async () => {
+      // Generate AI description in background (non-blocking)
+      Promise.resolve().then(async () => {
         try {
           const generated = await generateWineDescription({
             name: wineRecord.name,

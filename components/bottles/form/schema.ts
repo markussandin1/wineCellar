@@ -14,11 +14,11 @@ export const bottleFormSchema = z.object({
   region: z.string().min(1, 'Region is required'),
   subRegion: optionalText,
   primaryGrape: optionalText,
-  bottleSize: z
-    .number({ invalid_type_error: 'Bottle size is required' })
+  bottleSize: z.coerce
+    .number()
     .positive('Bottle size must be positive'),
-  quantity: z
-    .number({ invalid_type_error: 'Quantity is required' })
+  quantity: z.coerce
+    .number()
     .min(0, 'Quantity cannot be negative'),
   acquisitionMethod: z.string().min(1, 'Acquisition method is required'),
   purchasePrice: optionalText,
