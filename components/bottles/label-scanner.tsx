@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { ScannedBottleForm } from './scanned-bottle-form';
 
-type ScanStep = 'upload' | 'processing' | 'review';
+type ScanStep = 'upload' | 'processing' | 'enriching' | 'review';
 
 interface ExtractedData {
   wineName: string;
@@ -20,6 +20,13 @@ interface ExtractedData {
   confidence: number;
   existingWineId?: string; // If we found a match in DB
   imageUrl?: string | null; // Uploaded label image URL
+  enrichmentData?: any; // Wine enrichment data if available
+  estimatedPrice?: {
+    amount?: number;
+    currency?: string;
+    confidence?: number;
+    reasoning?: string;
+  };
 }
 
 interface LabelScannerProps {
@@ -68,21 +75,66 @@ export function LabelScanner({ initialPlacement, userCurrency }: LabelScannerPro
     setStep('processing');
 
     try {
+      // Step 1: Scan label to extract wine data
       const formData = new FormData();
       formData.append('image', selectedImage);
 
-      const response = await fetch('/api/scan-label', {
+      const scanResponse = await fetch('/api/scan-label', {
         method: 'POST',
         body: formData,
       });
 
-      if (!response.ok) {
-        const data = await response.json();
+      if (!scanResponse.ok) {
+        const data = await scanResponse.json();
         throw new Error(data.error || 'Failed to scan label');
       }
 
-      const data = await response.json();
-      setExtractedData(data);
+      const scanData = await scanResponse.json();
+
+      // Step 2: If wine doesn't exist, create it with enrichment
+      if (!scanData.existingWineId) {
+        console.log('Wine not found, creating with enrichment...');
+        setStep('enriching');
+
+        const createResponse = await fetch('/api/wines/create', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            name: scanData.wineName,
+            producerName: scanData.producerName,
+            wineType: scanData.wineType,
+            vintage: scanData.vintage,
+            country: scanData.country,
+            region: scanData.region,
+            subRegion: scanData.subRegion,
+            primaryGrape: scanData.primaryGrape,
+            primaryLabelImageUrl: scanData.imageUrl,
+            runEnrichment: true,
+          }),
+        });
+
+        if (!createResponse.ok) {
+          const errorData = await createResponse.json();
+          // If wine already exists (race condition), just continue
+          if (createResponse.status === 409) {
+            console.log('Wine was created by another request, continuing...');
+          } else {
+            throw new Error(errorData.error || 'Failed to create wine');
+          }
+        }
+
+        const createData = await createResponse.json();
+
+        // Update scanData with newly created wine ID and enrichment
+        if (createData.success && createData.wine) {
+          scanData.existingWineId = createData.wine.id;
+          scanData.enrichmentData = createData.wine.enrichmentData;
+        }
+      }
+
+      setExtractedData(scanData);
       setStep('review');
     } catch (err: any) {
       setError(err.message);
@@ -216,7 +268,27 @@ export function LabelScanner({ initialPlacement, userCurrency }: LabelScannerPro
           <div className="text-center">
             <h3 className="font-semibold">Analyzing label...</h3>
             <p className="text-sm text-muted-foreground mt-1">
-              This may take a few seconds
+              Extracting wine information
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Enriching step (creating new wine with AI enrichment)
+  if (step === 'enriching') {
+    return (
+      <div className="rounded-lg border bg-card p-12">
+        <div className="flex flex-col items-center justify-center space-y-4">
+          <Loader2 className="h-12 w-12 animate-spin text-primary" />
+          <div className="text-center">
+            <h3 className="font-semibold">Creating wine profile...</h3>
+            <p className="text-sm text-muted-foreground mt-1">
+              Generating sommelier-quality tasting notes and details
+            </p>
+            <p className="text-xs text-muted-foreground mt-2">
+              This may take 10-15 seconds
             </p>
           </div>
         </div>
