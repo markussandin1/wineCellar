@@ -8,9 +8,14 @@
  *   npm run test:label-scan ./test-images/barolo.jpg
  */
 
+import { config } from 'dotenv';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
 import { labelScanAgent } from '../lib/ai/agents/label-scan';
+
+// Load environment variables from .env and .env.local
+config({ path: '.env' });
+config({ path: '.env.local', override: true });
 
 async function testLabelScan(imagePath: string) {
   console.log('🍷 Testing Label Scan Agent V2\n');
