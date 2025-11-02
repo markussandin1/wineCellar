@@ -187,7 +187,25 @@ export function ScannedBottleForm({
                   ✓ Wine found in database
                 </p>
                 <p className="text-xs text-green-600 dark:text-green-500 mt-1">
-                  Using existing wine information. You can still edit the details below.
+                  This wine already exists in our database. The wine information below is read-only.
+                </p>
+                <p className="text-xs text-green-600 dark:text-green-500 mt-1">
+                  Fill in <strong>your bottle details</strong> (price, location, notes) below.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {!extractedData.existingWineId && (
+          <div className="rounded-md bg-blue-500/10 border border-blue-500/20 p-4">
+            <div className="flex items-start">
+              <div className="flex-1">
+                <p className="text-sm font-medium text-blue-700 dark:text-blue-400">
+                  ✨ New wine created
+                </p>
+                <p className="text-xs text-blue-600 dark:text-blue-500 mt-1">
+                  This wine has been added to the database with AI-generated details.
                 </p>
               </div>
             </div>
@@ -198,7 +216,12 @@ export function ScannedBottleForm({
 
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">Wine Information</h2>
+            <h2 className="text-lg font-semibold">
+              Wine Information
+              {extractedData.existingWineId && (
+                <span className="ml-2 text-xs font-normal text-muted-foreground">(Read-only)</span>
+              )}
+            </h2>
             <span className="text-xs text-muted-foreground">
               Confidence: {Math.round(extractedData.confidence * 100)}%
             </span>
@@ -212,7 +235,8 @@ export function ScannedBottleForm({
               <input
                 id="wineName"
                 type="text"
-                className="w-full rounded-md border bg-background px-3 py-2"
+                disabled={!!extractedData.existingWineId}
+                className="w-full rounded-md border bg-background px-3 py-2 disabled:opacity-60 disabled:cursor-not-allowed"
                 {...register('wineName')}
               />
               <FieldError name="wineName" />
@@ -227,7 +251,8 @@ export function ScannedBottleForm({
                 type="number"
                 min="1900"
                 max={new Date().getFullYear() + 5}
-                className="w-full rounded-md border bg-background px-3 py-2"
+                disabled={!!extractedData.existingWineId}
+                className="w-full rounded-md border bg-background px-3 py-2 disabled:opacity-60 disabled:cursor-not-allowed"
                 {...register('vintage')}
               />
             </div>
@@ -241,7 +266,8 @@ export function ScannedBottleForm({
               <input
                 id="producerName"
                 type="text"
-                className="w-full rounded-md border bg-background px-3 py-2"
+                disabled={!!extractedData.existingWineId}
+                className="w-full rounded-md border bg-background px-3 py-2 disabled:opacity-60 disabled:cursor-not-allowed"
                 {...register('producerName')}
               />
               <FieldError name="producerName" />
@@ -253,7 +279,8 @@ export function ScannedBottleForm({
               </label>
               <select
                 id="wineType"
-                className="w-full rounded-md border bg-background px-3 py-2"
+                disabled={!!extractedData.existingWineId}
+                className="w-full rounded-md border bg-background px-3 py-2 disabled:opacity-60 disabled:cursor-not-allowed"
                 {...register('wineType')}
               >
                 <option value="">Select type...</option>
@@ -275,7 +302,8 @@ export function ScannedBottleForm({
               <input
                 id="country"
                 type="text"
-                className="w-full rounded-md border bg-background px-3 py-2"
+                disabled={!!extractedData.existingWineId}
+                className="w-full rounded-md border bg-background px-3 py-2 disabled:opacity-60 disabled:cursor-not-allowed"
                 {...register('country')}
               />
               <FieldError name="country" />
@@ -288,7 +316,8 @@ export function ScannedBottleForm({
               <input
                 id="region"
                 type="text"
-                className="w-full rounded-md border bg-background px-3 py-2"
+                disabled={!!extractedData.existingWineId}
+                className="w-full rounded-md border bg-background px-3 py-2 disabled:opacity-60 disabled:cursor-not-allowed"
                 {...register('region')}
               />
               <FieldError name="region" />
@@ -301,7 +330,8 @@ export function ScannedBottleForm({
               <input
                 id="subRegion"
                 type="text"
-                className="w-full rounded-md border bg-background px-3 py-2"
+                disabled={!!extractedData.existingWineId}
+                className="w-full rounded-md border bg-background px-3 py-2 disabled:opacity-60 disabled:cursor-not-allowed"
                 {...register('subRegion')}
               />
             </div>
@@ -314,10 +344,19 @@ export function ScannedBottleForm({
             <input
               id="primaryGrape"
               type="text"
-              className="w-full rounded-md border bg-background px-3 py-2"
+              disabled={!!extractedData.existingWineId}
+              className="w-full rounded-md border bg-background px-3 py-2 disabled:opacity-60 disabled:cursor-not-allowed"
               {...register('primaryGrape')}
             />
           </div>
+        </div>
+
+        {/* Separator between Wine and Bottle information */}
+        <div className="border-t pt-6">
+          <h2 className="text-lg font-semibold mb-4">Your Bottle Details</h2>
+          <p className="text-sm text-muted-foreground mb-6">
+            Fill in information specific to your bottle (price, location, notes, etc.)
+          </p>
         </div>
 
         <PurchaseDetailsFields />
