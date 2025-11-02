@@ -255,12 +255,19 @@ export async function getBottles(filters?: {
 
   await ensureUserRecord(supabase, user);
 
+  const shouldInnerJoinWine = Boolean(
+    (filters?.wineType && filters.wineType !== 'all') ||
+      (filters?.region && filters.region.trim().length > 0)
+  );
+
+  const wineRelationship = shouldInnerJoinWine ? 'wine:wines!inner(*)' : 'wine:wines(*)';
+
   // Build Supabase query
   let query = supabase
     .from('bottles')
     .select(`
       *,
-      wine:wines(*)
+      ${wineRelationship}
     `)
     .eq('user_id', user.id);
 
@@ -274,13 +281,16 @@ export async function getBottles(filters?: {
   }
 
   // Apply wine type filter
-  if (filters?.wineType) {
+  if (filters?.wineType && filters.wineType !== 'all') {
     query = query.eq('wine.wine_type', filters.wineType);
   }
 
   // Apply region filter
   if (filters?.region) {
-    query = query.ilike('wine.region', `%${filters.region}%`);
+    const region = filters.region.trim();
+    if (region) {
+      query = query.ilike('wine.region', `%${region}%`);
+    }
   }
 
   // Apply search filter (search in wine name or producer name)

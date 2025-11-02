@@ -56,12 +56,14 @@ export function normalizeBottleRecord<RecordType extends Record<string, any>>(re
     bottle.consumptionLogs = bottle.consumptionLogs.map(normalizeConsumptionLog);
   }
 
-  if (bottle.wine) {
+  if (bottle.wine && typeof bottle.wine === 'object' && !Array.isArray(bottle.wine)) {
     const normalizedWine: any = camelCaseKeys(bottle.wine);
     if (normalizedWine.alcoholPercentage !== null && normalizedWine.alcoholPercentage !== undefined) {
       normalizedWine.alcoholPercentage = normalizedWine.alcoholPercentage.toString();
     }
     bottle.wine = normalizedWine;
+  } else if (bottle.wine !== null && bottle.wine !== undefined) {
+    bottle.wine = null;
   }
 
   return bottle;

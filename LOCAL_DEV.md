@@ -60,6 +60,13 @@ npm run dev
    - Try adding a bottle
    - Test label scanning (requires OpenAI key)
 
+3. **Expose Supabase via MCP (optional)**
+   ```bash
+   npm run mcp:supabase
+   ```
+   - Default endpoint: http://127.0.0.1:54322/mcp
+   - Requires `SUPABASE_SERVICE_ROLE_KEY` and `SUPABASE_DB_URL`/`DATABASE_URL`
+
 ### 📊 Database Schema
 
 The database uses **snake_case** for all column names:

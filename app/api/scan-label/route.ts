@@ -5,7 +5,7 @@ import OpenAI from 'openai';
 import { labelScanConfig } from '@/config/ai';
 
 const openai = new OpenAI({
-  apiKey: process.env.OpenAI_API_Key,
+  apiKey: process.env.OpenAI_API_Key ?? process.env.OPENAI_API_KEY,
 });
 
 // Helper function to calculate string similarity (simple Levenshtein distance)
@@ -38,6 +38,31 @@ function levenshteinDistance(s1: string, s2: string): number {
     if (i > 0) costs[s2.length] = lastValue;
   }
   return costs[s2.length];
+}
+
+function extractResponseText(response: any): string {
+  if (typeof response?.output_text === 'string' && response.output_text.trim().length > 0) {
+    return response.output_text;
+  }
+
+  if (Array.isArray(response?.output)) {
+    const parts: string[] = [];
+    for (const item of response.output) {
+      if (item.type === 'message' && Array.isArray(item.content)) {
+        for (const piece of item.content) {
+          if (piece.type === 'output_text') {
+            parts.push(piece.text ?? '');
+          }
+        }
+      }
+    }
+    const joined = parts.join('').trim();
+    if (joined.length > 0) {
+      return joined;
+    }
+  }
+
+  return '';
 }
 
 export async function POST(request: NextRequest) {
@@ -73,29 +98,32 @@ export async function POST(request: NextRequest) {
 
     // Step 1: Extract basic information with OpenAI Vision
     console.log('Extracting basic wine information from label...');
-    const visionResponse = await openai.chat.completions.create({
+    const mimeType = image.type || 'image/jpeg';
+    const visionResponse = await openai.responses.create({
       model: labelScanConfig.model,
-      messages: [
+      input: [
         {
           role: 'user',
           content: [
             {
-              type: 'text',
+              type: 'input_text',
               text: labelScanConfig.prompt,
             },
             {
-              type: 'image_url',
-              image_url: {
-                url: `data:image/jpeg;base64,${base64Image}`,
-              },
+              type: 'input_image',
+              image_url: `data:${mimeType};base64,${base64Image}`,
+              detail: 'auto',
             },
           ],
         },
       ],
-      max_tokens: labelScanConfig.maxTokens,
+      max_output_tokens: labelScanConfig.maxTokens,
+      reasoning: { effort: 'minimal' },
+      text: { verbosity: 'low' },
+      store: false,
     });
 
-    const extractedText = visionResponse.choices[0]?.message?.content;
+    const extractedText = extractResponseText(visionResponse);
     if (!extractedText) {
       throw new Error('Failed to extract data from label');
     }

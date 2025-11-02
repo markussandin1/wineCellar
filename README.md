@@ -137,7 +137,21 @@ npm run lint         # Run ESLint
 npm run db:generate  # Generate Prisma client
 npm run db:push      # Push schema to database
 npm run db:studio    # Open Prisma Studio
+npm run mcp:supabase # Compile and launch the Supabase MCP server
 ```
+
+## MCP Supabase Server
+
+This repository ships with a Model Context Protocol (MCP) server that exposes Supabase metadata and read-only helpers so AI coding agents can reason about the live schema and data.
+
+- Ensure the following environment variables are available when you launch the server: `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` (or fall back to `NEXT_PUBLIC_SUPABASE_ANON_KEY`), and a database connection string via `SUPABASE_DB_URL` or `DATABASE_URL`.
+- Start the server locally:
+  ```bash
+  npm run mcp:supabase
+  ```
+- By default it listens on `http://127.0.0.1:54322/mcp`. Override the host/port/path with `SUPABASE_MCP_HOST`, `SUPABASE_MCP_PORT`, and `SUPABASE_MCP_PATH` if your MCP client requires a different endpoint.
+- In VS Code / Claude Desktop, register the endpoint under a LocalProcess/HTTP MCP server entry to gain Supabase-aware tools (`list_supabase_tables`, `describe_supabase_table`, `sample_supabase_table`, `run_supabase_sql`, etc.).
+
 
 ## Contributing
 

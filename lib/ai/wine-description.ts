@@ -87,6 +87,31 @@ function formatDescription(payload: GeneratedDescriptionPayload): { description:
   return { description, summary };
 }
 
+function extractOutputText(response: any): string {
+  if (typeof response?.output_text === 'string' && response.output_text.trim().length > 0) {
+    return response.output_text;
+  }
+
+  if (Array.isArray(response?.output)) {
+    const parts: string[] = [];
+    for (const item of response.output) {
+      if (item.type === 'message' && Array.isArray(item.content)) {
+        for (const piece of item.content) {
+          if (piece.type === 'output_text') {
+            parts.push(piece.text ?? '');
+          }
+        }
+      }
+    }
+    const combined = parts.join('').trim();
+    if (combined.length > 0) {
+      return combined;
+    }
+  }
+
+  return '';
+}
+
 export async function generateWineDescription(
   input: WineDescriptionPromptInput
 ): Promise<GeneratedWineDescription | null> {
@@ -97,17 +122,25 @@ export async function generateWineDescription(
 
   try {
     const userPrompt = wineDescriptionConfig.buildUserPrompt(input);
-    const completion = await client.chat.completions.create({
+    const response = await client.responses.create({
       model: wineDescriptionConfig.model,
-      temperature: wineDescriptionConfig.temperature,
-      max_tokens: wineDescriptionConfig.maxTokens,
-      messages: [
-        { role: 'system', content: wineDescriptionConfig.systemPrompt },
-        { role: 'user', content: userPrompt },
+      input: [
+        {
+          role: 'system',
+          content: [{ type: 'input_text', text: wineDescriptionConfig.systemPrompt }],
+        },
+        {
+          role: 'user',
+          content: [{ type: 'input_text', text: userPrompt }],
+        },
       ],
+      max_output_tokens: wineDescriptionConfig.maxTokens,
+      reasoning: { effort: 'low' },
+      text: { verbosity: 'medium' },
+      store: false,
     });
 
-    const messageContent = completion.choices[0]?.message?.content;
+    const messageContent = extractOutputText(response);
     if (!messageContent) {
       console.warn('OpenAI returned empty content for wine description');
       return null;

@@ -56,7 +56,7 @@ function buildFactsSection(input: WineDescriptionPromptInput): string {
 }
 
 export const wineDescriptionConfig: WineDescriptionConfig = {
-  model: process.env.WINE_DESCRIPTION_MODEL ?? 'gpt-4.1-mini',
+  model: process.env.WINE_DESCRIPTION_MODEL ?? 'gpt-5-mini',
   temperature: 0.2,
   maxTokens: 700,
   systemPrompt:
@@ -95,7 +95,7 @@ export interface LabelScanConfig {
 }
 
 export const labelScanConfig: LabelScanConfig = {
-  model: 'gpt-4.1-2025-04-14',
+  model: 'gpt-5-mini',
   maxTokens: 700,
   prompt: `Analyze this wine label and extract the following information in JSON format:
 {

@@ -8,6 +8,6 @@
     "esModuleInterop": true,
     "resolveJsonModule": true
   },
-  "include": ["scripts/backfill-wine-descriptions.ts"],
+  "include": ["scripts/**/*.ts"],
   "exclude": []
 }
