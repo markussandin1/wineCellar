@@ -1,12 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { uploadLabelImage } from '@/lib/supabase';
-import OpenAI from 'openai';
-import { labelScanConfig } from '@/config/ai';
-
-const openai = new OpenAI({
-  apiKey: process.env.OpenAI_API_Key ?? process.env.OPENAI_API_KEY,
-});
+import { labelScanAgent } from '@/lib/ai/agents/label-scan';
 
 // Helper function to calculate string similarity (simple Levenshtein distance)
 function similarity(s1: string, s2: string): number {
@@ -40,31 +35,6 @@ function levenshteinDistance(s1: string, s2: string): number {
   return costs[s2.length];
 }
 
-function extractResponseText(response: any): string {
-  if (typeof response?.output_text === 'string' && response.output_text.trim().length > 0) {
-    return response.output_text;
-  }
-
-  if (Array.isArray(response?.output)) {
-    const parts: string[] = [];
-    for (const item of response.output) {
-      if (item.type === 'message' && Array.isArray(item.content)) {
-        for (const piece of item.content) {
-          if (piece.type === 'output_text') {
-            parts.push(piece.text ?? '');
-          }
-        }
-      }
-    }
-    const joined = parts.join('').trim();
-    if (joined.length > 0) {
-      return joined;
-    }
-  }
-
-  return '';
-}
-
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient();
@@ -96,54 +66,21 @@ export async function POST(request: NextRequest) {
       // Continue even if upload fails - we can still extract data
     }
 
-    // Step 1: Extract basic information with OpenAI Vision
+    // Step 1: Extract basic information using Label Scan Agent V2
     console.log('Extracting basic wine information from label...');
     const mimeType = image.type || 'image/jpeg';
-    const visionResponse = await openai.responses.create({
-      model: labelScanConfig.model,
-      input: [
-        {
-          role: 'user',
-          content: [
-            {
-              type: 'input_text',
-              text: labelScanConfig.prompt,
-            },
-            {
-              type: 'input_image',
-              image_url: `data:${mimeType};base64,${base64Image}`,
-              detail: 'auto',
-            },
-          ],
-        },
-      ],
-      max_output_tokens: labelScanConfig.maxTokens,
-      reasoning: { effort: 'minimal' },
-      text: { verbosity: 'low' },
-      store: false,
+    const scanResult = await labelScanAgent.execute({
+      imageBase64: base64Image,
+      mimeType,
     });
 
-    const extractedText = extractResponseText(visionResponse);
-    if (!extractedText) {
-      throw new Error('Failed to extract data from label');
+    if (!scanResult.success || !scanResult.data) {
+      throw new Error(scanResult.error || 'Failed to extract data from label');
     }
 
-    // Clean up the response - remove markdown code blocks if present
-    let cleanedText = extractedText.trim();
-    if (cleanedText.startsWith('```json')) {
-      cleanedText = cleanedText.slice(7); // Remove ```json
-    } else if (cleanedText.startsWith('```')) {
-      cleanedText = cleanedText.slice(3); // Remove ```
-    }
-    if (cleanedText.endsWith('```')) {
-      cleanedText = cleanedText.slice(0, -3); // Remove trailing ```
-    }
-    cleanedText = cleanedText.trim();
+    const extracted = scanResult.data;
 
-    // Parse the JSON response
-    const extracted = JSON.parse(cleanedText);
-
-    // Step 2: Search for existing wine in database using Supabase Data API
+    // Step 2: Search for existing wine in database
     console.log('Searching for existing wine in database...');
     const { data: existingWines, error: searchError } = await supabase
       .from('wines')
@@ -177,7 +114,7 @@ export async function POST(request: NextRequest) {
     if (bestMatch) {
       console.log(`Found existing wine: ${bestMatch.name} (${bestScore * 100}% match)`);
 
-      // Return existing wine data
+      // Return existing wine data (FAST PATH - no AI enrichment needed)
       return NextResponse.json({
         wineName: bestMatch.name,
         producerName: bestMatch.producer_name,
@@ -189,22 +126,35 @@ export async function POST(request: NextRequest) {
         primaryGrape: bestMatch.primary_grape,
         confidence: bestScore,
         existingWineId: bestMatch.id,
-        imageUrl, // Include uploaded image URL
-        // Include additional wine data if available
+        imageUrl,
+        // Include enrichment data if available
+        enrichmentData: bestMatch.enrichment_data,
+        // Legacy fields for backward compatibility
         description: bestMatch.description,
         tastingNotes: bestMatch.tasting_notes,
         aiGeneratedSummary: bestMatch.ai_generated_summary,
+        // Include estimated price from agent
+        estimatedPrice: extracted.estimatedPrice,
       });
     }
 
     console.log('No existing wine found, returning extracted data');
 
     // No match found - return extracted data
-    // In a future enhancement, we could call OpenAI again here for detailed info
+    // Frontend will decide whether to create wine with enrichment
     return NextResponse.json({
-      ...extracted,
+      wineName: extracted.wineName,
+      producerName: extracted.producerName,
+      vintage: extracted.vintage,
+      wineType: extracted.wineType,
+      country: extracted.country,
+      region: extracted.region,
+      subRegion: extracted.subRegion,
+      primaryGrape: extracted.primaryGrape,
+      confidence: extracted.confidence,
       existingWineId: null,
-      imageUrl, // Include uploaded image URL
+      imageUrl,
+      estimatedPrice: extracted.estimatedPrice,
     });
   } catch (error: any) {
     console.error('Label scanning error:', error);

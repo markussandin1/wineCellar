@@ -1,0 +1,145 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@/lib/supabase/server';
+import { wineEnrichmentAgent } from '@/lib/ai/agents/wine-enrichment';
+import type { WineEnrichmentInput } from '@/lib/ai/agents/wine-enrichment';
+
+export async function POST(request: NextRequest) {
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const body = await request.json();
+    const {
+      name,
+      producerName,
+      wineType,
+      vintage,
+      country,
+      region,
+      subRegion,
+      primaryGrape,
+      primaryLabelImageUrl,
+      runEnrichment = true,
+    } = body;
+
+    // Validate required fields
+    if (!name || !producerName || !wineType || !country || !region) {
+      return NextResponse.json(
+        { error: 'Missing required fields: name, producerName, wineType, country, region' },
+        { status: 400 }
+      );
+    }
+
+    // Check if wine already exists (prevent duplicates)
+    const { data: existingWine } = await supabase
+      .from('wines')
+      .select('id')
+      .eq('name', name)
+      .eq('producer_name', producerName)
+      .eq('vintage', vintage || null)
+      .maybeSingle();
+
+    if (existingWine) {
+      return NextResponse.json(
+        { error: 'Wine already exists', wineId: existingWine.id },
+        { status: 409 }
+      );
+    }
+
+    let enrichmentData = null;
+    let enrichmentGeneratedAt = null;
+    let enrichmentVersion = null;
+
+    // Run wine enrichment if requested
+    if (runEnrichment) {
+      console.log('Running wine enrichment for:', name);
+
+      const enrichmentInput: WineEnrichmentInput = {
+        name,
+        producerName,
+        wineType,
+        vintage,
+        country,
+        region,
+        subRegion,
+        primaryGrape,
+      };
+
+      try {
+        const enrichmentResult = await wineEnrichmentAgent.execute(enrichmentInput);
+
+        if (enrichmentResult.success && enrichmentResult.data) {
+          enrichmentData = enrichmentResult.data;
+          enrichmentGeneratedAt = new Date().toISOString();
+          enrichmentVersion = '2.0.0'; // Wine Enrichment Agent V2
+          console.log('Wine enrichment successful');
+        } else {
+          console.error('Wine enrichment failed:', enrichmentResult.error);
+          // Continue without enrichment rather than failing completely
+        }
+      } catch (enrichmentError) {
+        console.error('Wine enrichment error:', enrichmentError);
+        // Continue without enrichment
+      }
+    }
+
+    // Create wine in database
+    const { data: newWine, error: insertError } = await supabase
+      .from('wines')
+      .insert({
+        name,
+        producer_name: producerName,
+        wine_type: wineType,
+        vintage,
+        country,
+        region,
+        sub_region: subRegion || null,
+        primary_grape: primaryGrape || null,
+        primary_label_image_url: primaryLabelImageUrl || null,
+        enrichment_data: enrichmentData,
+        enrichment_generated_at: enrichmentGeneratedAt,
+        enrichment_version: enrichmentVersion,
+        data_source: 'label_scan',
+        verified: false,
+      })
+      .select('*')
+      .single();
+
+    if (insertError) {
+      console.error('Error creating wine:', insertError);
+      return NextResponse.json(
+        { error: 'Failed to create wine in database' },
+        { status: 500 }
+      );
+    }
+
+    console.log('Wine created successfully:', newWine.id);
+
+    return NextResponse.json({
+      success: true,
+      wine: {
+        id: newWine.id,
+        name: newWine.name,
+        producerName: newWine.producer_name,
+        wineType: newWine.wine_type,
+        vintage: newWine.vintage,
+        country: newWine.country,
+        region: newWine.region,
+        subRegion: newWine.sub_region,
+        primaryGrape: newWine.primary_grape,
+        enrichmentData: newWine.enrichment_data,
+        primaryLabelImageUrl: newWine.primary_label_image_url,
+      },
+    });
+  } catch (error: any) {
+    console.error('Wine creation error:', error);
+    return NextResponse.json(
+      { error: error.message || 'Failed to create wine' },
+      { status: 500 }
+    );
+  }
+}
