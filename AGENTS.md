@@ -193,3 +193,199 @@ Input validation: Use Zod schemas for all inputs
 Image uploads: Validate file type/size, sanitize filenames
 SQL injection: Prisma handles this, but validate all inputs
 API keys: Never expose in client code
+
+---
+
+# AI Agent System Architecture (V2)
+
+## Overview
+
+The Wine Cellar app uses a modular AI agent system to intelligently gather wine information. The key principle: **AI is only used when needed**, specifically when a wine doesn't exist in our database.
+
+## Core Concepts
+
+### Wine vs Bottle Separation
+
+**Wine** = Immutable metadata about the wine itself
+- Producer, name, vintage, region, grape varieties
+- Tasting notes, food pairings, descriptions
+- Shared across all users
+- Only enriched once via AI agents
+
+**Bottle** = User's specific instance
+- Purchase price, date, location
+- Consumption status, personal ratings
+- User-specific notes
+- Never requires AI processing
+
+### Agent Philosophy
+
+1. **Single Responsibility**: Each agent does ONE thing well
+2. **Composable**: Agents can run independently or in parallel
+3. **Testable**: Each agent has clear inputs/outputs
+4. **Maintainable**: Config and prompts isolated per agent
+5. **Efficient**: Only run when needed
+
+## Agent System Structure
+
+```
+lib/ai/agents/
+├── base/
+│   ├── agent.types.ts          # Base interfaces for all agents
+│   ├── agent.config.ts         # Shared configuration utilities
+│   └── agent.executor.ts       # Orchestration helpers
+├── label-scan/
+│   ├── label-scan.agent.ts     # Vision API label extraction
+│   ├── label-scan.config.ts    # Model & prompt configuration
+│   └── label-scan.types.ts     # Input/output types
+├── wine-enrichment/
+│   ├── wine-enrichment.agent.ts    # Detailed wine descriptions
+│   ├── wine-enrichment.config.ts   # Model & prompt configuration
+│   └── wine-enrichment.types.ts    # Input/output types
+├── food-pairing/
+│   ├── food-pairing.agent.ts       # Food pairing recommendations
+│   ├── food-pairing.config.ts      # Model & prompt configuration
+│   └── food-pairing.types.ts       # Input/output types
+└── price-estimation/
+    ├── price-estimation.agent.ts   # Market price estimation
+    ├── price-estimation.config.ts  # Model & prompt configuration
+    └── price-estimation.types.ts   # Input/output types
+```
+
+## Agent Workflows
+
+### Scenario 1: Existing Wine (Fast Path)
+
+```
+User scans label
+    ↓
+LabelScanAgent extracts: name, producer, vintage
+    ↓
+Database lookup → MATCH FOUND
+    ↓
+Return existing wine data
+    ↓
+Show bottle form (user adds price, date, location)
+    ↓
+Save bottle record
+```
+
+**AI Usage**: 1 agent (label scan only)
+**Cost**: ~$0.001 per scan
+**Speed**: ~2 seconds
+
+### Scenario 2: New Wine (Enrichment Path)
+
+```
+User scans label
+    ↓
+LabelScanAgent extracts: name, producer, vintage
+    ↓
+Database lookup → NO MATCH
+    ↓
+Parallel agent execution:
+    ├─ WineEnrichmentAgent → descriptions, tasting notes
+    ├─ FoodPairingAgent → food recommendations
+    └─ PriceEstimationAgent → market price
+    ↓
+Merge results & save wine record
+    ↓
+Show bottle form with pre-filled wine data
+    ↓
+User adds bottle-specific info
+    ↓
+Save bottle record
+```
+
+**AI Usage**: 4 agents (parallel execution)
+**Cost**: ~$0.005 per new wine
+**Speed**: ~5 seconds (parallel)
+
+## Base Agent Interface
+
+Every agent implements:
+
+```typescript
+interface Agent<TInput, TOutput> {
+  name: string;
+  version: string;
+  execute(input: TInput): Promise<AgentResult<TOutput>>;
+}
+
+interface AgentResult<T> {
+  success: boolean;
+  data?: T;
+  error?: string;
+  confidence?: number;
+  metadata: {
+    model: string;
+    tokensUsed: number;
+    latencyMs: number;
+  };
+}
+```
+
+## Agent Configuration Pattern
+
+Each agent has isolated configuration:
+
+```typescript
+// agent-name.config.ts
+export const agentConfig = {
+  name: 'agent-name',
+  version: '1.0.0',
+  model: 'gpt-5-mini', // Can be overridden via env
+  temperature: 0.2,
+  maxTokens: 500,
+  systemPrompt: '...',
+  userPromptTemplate: '...',
+};
+```
+
+## Testing Strategy
+
+1. **Unit Tests**: Each agent tested in isolation
+2. **Integration Tests**: Full workflow (scan → enrich → save)
+3. **A/B Testing**: Compare V1 vs V2 results
+4. **Manual Testing**: Real wine labels
+
+## Migration Plan
+
+### Phase 1: Build V2 (Parallel)
+- Create new agent system in `lib/ai/agents/`
+- New API endpoint: `/api/scan-label-v2`
+- New component: `LabelScannerV2`
+- V1 remains untouched and functional
+
+### Phase 2: Testing & Validation
+- Test V2 with various wine labels
+- Compare accuracy and speed with V1
+- Tune prompts and configs
+
+### Phase 3: Cutover
+- Rename V2 → V1 (atomic switch)
+- Remove old V1 code
+- Monitor for issues
+
+### Rollback Plan
+If V2 has issues, simply revert the rename commits.
+
+## Adding New Agents
+
+To add a new agent (e.g., "vintage-quality"):
+
+1. Create folder: `lib/ai/agents/vintage-quality/`
+2. Add three files:
+   - `vintage-quality.agent.ts` (implements Agent interface)
+   - `vintage-quality.config.ts` (model, prompts)
+   - `vintage-quality.types.ts` (input/output types)
+3. Register in orchestrator
+4. Add to parallel execution in new wine flow
+
+## Performance Optimizations
+
+1. **Caching**: Cache wine enrichment results by wine ID
+2. **Batching**: Queue multiple scans for batch processing
+3. **Timeouts**: Fail fast if agent takes >10s
+4. **Fallbacks**: If enrichment fails, save basic wine data
+5. **Monitoring**: Track token usage and costs per agent
