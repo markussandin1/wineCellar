@@ -168,6 +168,11 @@ model Wine {
   aiGeneratedSummary   String?  @map("ai_generated_summary")
   primaryLabelImageUrl String?  @map("primary_label_image_url")
 
+  // Wine Enrichment (from Wine Enrichment Agent V2)
+  enrichmentData       Json?     @map("enrichment_data")
+  enrichmentGeneratedAt DateTime? @map("enrichment_generated_at")
+  enrichmentVersion    String?   @map("enrichment_version") // Track agent version
+
   // Metadata
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")

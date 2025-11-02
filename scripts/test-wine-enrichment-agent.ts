@@ -117,8 +117,13 @@ async function runTest(testCase: { name: string; input: WineEnrichmentInput }) {
     const result = await wineEnrichmentAgent.execute(testCase.input);
     const duration = Date.now() - startTime;
 
-    console.log(`✅ Success (${duration}ms)`);
-    console.log(formatOutput(result));
+    if (result.success && result.data) {
+      console.log(`✅ Success (${duration}ms)`);
+      console.log(formatOutput(result.data));
+    } else {
+      console.error(`❌ Failed (${duration}ms)`);
+      console.error('Error:', result.error || 'Unknown error');
+    }
   } catch (error) {
     const duration = Date.now() - startTime;
     console.error(`❌ Failed (${duration}ms)`);

@@ -80,16 +80,20 @@ function buildUserPrompt(input: WineEnrichmentInput): string {
 /**
  * Wine enrichment agent configuration
  */
-export const wineEnrichmentConfig: AgentConfig & {
-  systemPrompt: string;
-  buildUserPrompt: (input: WineEnrichmentInput) => string;
-} = {
-  ...createAgentConfig('wine-enrichment', '2.0.0', {
-    model: getModel('WINE_ENRICHMENT_MODEL', 'gpt-5-mini'),
-    temperature: 0.2,
-    maxTokens: 800,
-    timeoutMs: 20000,
-  }),
+const baseConfig = createAgentConfig('wine-enrichment', '2.0.0', {
+  model: getModel('WINE_ENRICHMENT_MODEL', 'gpt-4o-mini'),
+  temperature: 0.2,
+  maxTokens: 800,
+  timeoutMs: 20000,
+});
+
+export const wineEnrichmentConfig = {
+  name: baseConfig.name,
+  version: baseConfig.version,
+  model: baseConfig.model,
+  temperature: baseConfig.temperature,
+  maxTokens: baseConfig.maxTokens,
+  timeoutMs: baseConfig.timeoutMs,
   systemPrompt:
     'You are a seasoned sommelier and wine writer. Write with confident, authoritative tone without referencing AI or speculation. Follow established wine journalism standards and keep the prose sensory, concrete, and useful for wine lovers.',
   buildUserPrompt,

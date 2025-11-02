@@ -9,99 +9,188 @@
  * - Signature traits
  */
 
-import { createAgent } from '../base';
+import OpenAI from 'openai';
+import {
+  Agent,
+  AgentResult,
+  AgentError,
+  getOpenAIKey,
+  validateOpenAIKey,
+  stripCodeFences,
+} from '../base';
 import { wineEnrichmentConfig } from './wine-enrichment.config';
 import type { WineEnrichmentInput, WineEnrichmentOutput } from './wine-enrichment.types';
 
-/**
- * Parse and validate the wine enrichment response
- */
-function parseWineEnrichmentResponse(rawResponse: string): WineEnrichmentOutput {
-  try {
-    const data = JSON.parse(rawResponse);
+export class WineEnrichmentAgent implements Agent<WineEnrichmentInput, WineEnrichmentOutput> {
+  name = wineEnrichmentConfig.name;
+  version = wineEnrichmentConfig.version;
 
-    // Validate required fields
-    if (!data.summary || typeof data.summary !== 'string') {
-      throw new Error('Missing or invalid summary');
-    }
-    if (!data.overview || typeof data.overview !== 'string') {
-      throw new Error('Missing or invalid overview');
-    }
-    if (!data.terroir || typeof data.terroir !== 'string') {
-      throw new Error('Missing or invalid terroir');
-    }
-    if (!data.winemaking || typeof data.winemaking !== 'string') {
-      throw new Error('Missing or invalid winemaking');
-    }
-    if (!data.serving || typeof data.serving !== 'string') {
-      throw new Error('Missing or invalid serving');
-    }
-    if (!data.signature_traits || typeof data.signature_traits !== 'string') {
-      throw new Error('Missing or invalid signature_traits');
+  private client: OpenAI | null = null;
+
+  /**
+   * Get or create OpenAI client
+   */
+  private getClient(): OpenAI {
+    if (this.client) {
+      return this.client;
     }
 
-    // Validate tasting notes
-    if (!data.tasting_notes || typeof data.tasting_notes !== 'object') {
-      throw new Error('Missing or invalid tasting_notes');
-    }
-    if (!data.tasting_notes.nose || typeof data.tasting_notes.nose !== 'string') {
-      throw new Error('Missing or invalid tasting_notes.nose');
-    }
-    if (!data.tasting_notes.palate || typeof data.tasting_notes.palate !== 'string') {
-      throw new Error('Missing or invalid tasting_notes.palate');
-    }
-    if (!data.tasting_notes.finish || typeof data.tasting_notes.finish !== 'string') {
-      throw new Error('Missing or invalid tasting_notes.finish');
-    }
+    validateOpenAIKey();
+    const apiKey = getOpenAIKey()!;
+    this.client = new OpenAI({ apiKey });
+    return this.client;
+  }
 
-    // Validate food pairings
-    if (!Array.isArray(data.food_pairings) || data.food_pairings.length === 0) {
-      throw new Error('Missing or invalid food_pairings (must be non-empty array)');
-    }
-    if (!data.food_pairings.every((p: unknown) => typeof p === 'string')) {
-      throw new Error('All food_pairings must be strings');
-    }
+  /**
+   * Parse and validate the wine enrichment response
+   */
+  private parseResponse(rawResponse: string): WineEnrichmentOutput {
+    try {
+      const data = JSON.parse(rawResponse);
 
-    return {
-      summary: data.summary.trim(),
-      overview: data.overview.trim(),
-      terroir: data.terroir.trim(),
-      winemaking: data.winemaking.trim(),
-      tastingNotes: {
-        nose: data.tasting_notes.nose.trim(),
-        palate: data.tasting_notes.palate.trim(),
-        finish: data.tasting_notes.finish.trim(),
-      },
-      serving: data.serving.trim(),
-      foodPairings: data.food_pairings.map((p: string) => p.trim()),
-      signatureTraits: data.signature_traits.trim(),
-    };
-  } catch (error) {
-    if (error instanceof SyntaxError) {
-      throw new Error(`Failed to parse wine enrichment JSON: ${error.message}`);
+      // Validate required fields
+      if (!data.summary || typeof data.summary !== 'string') {
+        throw new Error('Missing or invalid summary');
+      }
+      if (!data.overview || typeof data.overview !== 'string') {
+        throw new Error('Missing or invalid overview');
+      }
+      if (!data.terroir || typeof data.terroir !== 'string') {
+        throw new Error('Missing or invalid terroir');
+      }
+      if (!data.winemaking || typeof data.winemaking !== 'string') {
+        throw new Error('Missing or invalid winemaking');
+      }
+      if (!data.serving || typeof data.serving !== 'string') {
+        throw new Error('Missing or invalid serving');
+      }
+      if (!data.signature_traits || typeof data.signature_traits !== 'string') {
+        throw new Error('Missing or invalid signature_traits');
+      }
+
+      // Validate tasting notes
+      if (!data.tasting_notes || typeof data.tasting_notes !== 'object') {
+        throw new Error('Missing or invalid tasting_notes');
+      }
+      if (!data.tasting_notes.nose || typeof data.tasting_notes.nose !== 'string') {
+        throw new Error('Missing or invalid tasting_notes.nose');
+      }
+      if (!data.tasting_notes.palate || typeof data.tasting_notes.palate !== 'string') {
+        throw new Error('Missing or invalid tasting_notes.palate');
+      }
+      if (!data.tasting_notes.finish || typeof data.tasting_notes.finish !== 'string') {
+        throw new Error('Missing or invalid tasting_notes.finish');
+      }
+
+      // Validate food pairings
+      if (!Array.isArray(data.food_pairings) || data.food_pairings.length === 0) {
+        throw new Error('Missing or invalid food_pairings (must be non-empty array)');
+      }
+      if (!data.food_pairings.every((p: unknown) => typeof p === 'string')) {
+        throw new Error('All food_pairings must be strings');
+      }
+
+      return {
+        summary: data.summary.trim(),
+        overview: data.overview.trim(),
+        terroir: data.terroir.trim(),
+        winemaking: data.winemaking.trim(),
+        tastingNotes: {
+          nose: data.tasting_notes.nose.trim(),
+          palate: data.tasting_notes.palate.trim(),
+          finish: data.tasting_notes.finish.trim(),
+        },
+        serving: data.serving.trim(),
+        foodPairings: data.food_pairings.map((p: string) => p.trim()),
+        signatureTraits: data.signature_traits.trim(),
+      };
+    } catch (error) {
+      if (error instanceof SyntaxError) {
+        throw new AgentError(
+          `Failed to parse wine enrichment JSON: ${error.message}`,
+          this.name,
+          error
+        );
+      }
+      throw error;
     }
-    throw error;
+  }
+
+  /**
+   * Execute wine enrichment
+   */
+  async execute(input: WineEnrichmentInput): Promise<AgentResult<WineEnrichmentOutput>> {
+    const startTime = Date.now();
+
+    try {
+      const client = this.getClient();
+
+      // Build the user prompt
+      const userPrompt = wineEnrichmentConfig.buildUserPrompt(input);
+
+      // Call OpenAI Chat API
+      const response = await client.chat.completions.create({
+        model: wineEnrichmentConfig.model,
+        messages: [
+          {
+            role: 'system',
+            content: wineEnrichmentConfig.systemPrompt,
+          },
+          {
+            role: 'user',
+            content: userPrompt,
+          },
+        ],
+        temperature: wineEnrichmentConfig.temperature,
+        max_tokens: wineEnrichmentConfig.maxTokens,
+      });
+
+      // Extract response text
+      const rawText = response.choices[0]?.message?.content;
+      if (!rawText) {
+        throw new AgentError('No response from OpenAI', this.name);
+      }
+
+      // Clean and parse JSON
+      const cleanedText = stripCodeFences(rawText);
+      const data = this.parseResponse(cleanedText);
+
+      // Calculate latency
+      const latencyMs = Date.now() - startTime;
+
+      return {
+        success: true,
+        data,
+        confidence: 1.0,
+        metadata: {
+          model: wineEnrichmentConfig.model,
+          tokensUsed: response.usage?.total_tokens || 0,
+          latencyMs,
+          timestamp: new Date(),
+        },
+      };
+    } catch (error) {
+      const latencyMs = Date.now() - startTime;
+
+      if (error instanceof AgentError) {
+        throw error;
+      }
+
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        metadata: {
+          model: wineEnrichmentConfig.model,
+          tokensUsed: 0,
+          latencyMs,
+          timestamp: new Date(),
+        },
+      };
+    }
   }
 }
 
 /**
- * Wine enrichment agent
+ * Create a singleton instance
  */
-export const wineEnrichmentAgent = createAgent({
-  name: wineEnrichmentConfig.name,
-  version: wineEnrichmentConfig.version,
-  execute: async (input: WineEnrichmentInput): Promise<WineEnrichmentOutput> => {
-    const { executeAgent } = await import('../base/agent.executor');
-
-    const userPrompt = wineEnrichmentConfig.buildUserPrompt(input);
-
-    const rawResponse = await executeAgent({
-      agentName: wineEnrichmentConfig.name,
-      systemPrompt: wineEnrichmentConfig.systemPrompt,
-      userPrompt,
-      options: wineEnrichmentConfig.options,
-    });
-
-    return parseWineEnrichmentResponse(rawResponse);
-  },
-});
+export const wineEnrichmentAgent = new WineEnrichmentAgent();
