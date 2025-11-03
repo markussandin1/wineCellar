@@ -3,8 +3,9 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Wine, MapPin, Calendar, DollarSign } from 'lucide-react';
+import { MapPin, DollarSign } from 'lucide-react';
 import { BottleFilters } from './bottle-filters';
+import { WineTypeIcon, WineTypeBadge, type WineType, playfair } from '@/lib/design-system';
 
 type Bottle = {
   id: string;
@@ -36,10 +37,10 @@ export function BottleList({ bottles }: { bottles: Bottle[] }) {
 
   const getStatusBadge = (status: string) => {
     const styles = {
-      in_cellar: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
-      consumed: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200',
-      gifted: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
-      other: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+      in_cellar: 'bg-emerald-900/50 text-emerald-300 border border-emerald-500/30',
+      consumed: 'bg-gray-700/50 text-gray-300 border border-gray-600/30',
+      gifted: 'bg-blue-900/50 text-blue-300 border border-blue-500/30',
+      other: 'bg-amber-900/50 text-amber-300 border border-amber-500/30',
     };
 
     const labels: Record<string, string> = {
@@ -50,22 +51,10 @@ export function BottleList({ bottles }: { bottles: Bottle[] }) {
     };
 
     return (
-      <span className={`px-2 py-1 rounded-full text-xs font-medium ${styles[status as keyof typeof styles] || styles.other}`}>
+      <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${styles[status as keyof typeof styles] || styles.other}`}>
         {labels[status] || status.replace('_', ' ')}
       </span>
     );
-  };
-
-  const getWineTypeColor = (type: string) => {
-    const colors = {
-      red: 'text-red-600 dark:text-red-400',
-      white: 'text-yellow-600 dark:text-yellow-400',
-      rose: 'text-pink-600 dark:text-pink-400',
-      sparkling: 'text-blue-600 dark:text-blue-400',
-      dessert: 'text-amber-600 dark:text-amber-400',
-      fortified: 'text-purple-600 dark:text-purple-400',
-    };
-    return colors[type as keyof typeof colors] || 'text-gray-600';
   };
 
   const getGridColumns = () => {
@@ -85,154 +74,168 @@ export function BottleList({ bottles }: { bottles: Bottle[] }) {
 
       {viewMode !== 'list' ? (
         <div className={`grid ${getGridColumns()} gap-6`}>
-          {bottles.map((bottle) => (
-            <Link
-              key={bottle.id}
-              href={`/bottle/${bottle.id}`}
-              className="block rounded-lg border bg-card overflow-hidden hover:shadow-lg transition-shadow"
-            >
-              {/* Label Image */}
-              <div className="relative w-full h-48 bg-muted">
-                {(bottle.labelImageUrl || bottle.wine?.primaryLabelImageUrl) ? (
-                  <Image
-                    src={bottle.labelImageUrl || bottle.wine?.primaryLabelImageUrl || ''}
-                    alt={`${bottle.wine?.name || 'Wine'} label`}
-                    fill
-                    className="object-cover"
-                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                  />
-                ) : (
-                  <div className="flex items-center justify-center h-full">
-                    <Wine className={`h-16 w-16 ${bottle.wine ? getWineTypeColor(bottle.wine.wineType) : 'text-gray-400'}`} />
-                  </div>
-                )}
-              </div>
+          {bottles.map((bottle) => {
+            const wineType = (bottle.wine?.wineType?.toLowerCase() || null) as WineType | null;
 
-              <div className="p-6">
-                <div className="flex justify-between items-start mb-4">
-                  <Wine className={`h-6 w-6 ${bottle.wine ? getWineTypeColor(bottle.wine.wineType) : 'text-gray-400'}`} />
-                  {getStatusBadge(bottle.status)}
-                </div>
-
-                <h3 className="font-semibold text-lg mb-1">
-                  {bottle.wine?.name || 'Unknown Wine'}
-                </h3>
-                <p className="text-sm text-muted-foreground mb-3">
-                  {bottle.wine?.producerName}
-                  {bottle.wine?.vintage && ` • ${bottle.wine.vintage}`}
-                </p>
-
-              <div className="space-y-2 text-sm">
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <MapPin className="h-4 w-4" />
-                  {bottle.wine?.region}, {bottle.wine?.country}
-                </div>
-
-                {bottle.purchasePrice && (
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <DollarSign className="h-4 w-4" />
-                    <span>
-                      {bottle.currency} {(parseFloat(bottle.purchasePrice) * bottle.quantity).toFixed(2)}
-                      {bottle.quantity > 1 && (
-                        <span className="text-xs ml-1">
-                          ({bottle.currency} {parseFloat(bottle.purchasePrice).toFixed(2)}/bottle)
-                        </span>
-                      )}
-                    </span>
-                  </div>
-                )}
-
-                {bottle.quantity > 0 && (
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <Wine className="h-4 w-4" />
-                    {bottle.quantity} bottle{bottle.quantity > 1 ? 's' : ''}
-                  </div>
-                )}
-              </div>
-
-              {bottle.rating && (
-                <div className="mt-3 pt-3 border-t">
-                  <div className="flex gap-1">
-                    {Array.from({ length: 5 }).map((_, i) => (
-                      <span
-                        key={i}
-                        className={i < bottle.rating! ? 'text-yellow-500' : 'text-gray-300'}
-                      >
-                        ★
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-              </div>
-            </Link>
-          ))}
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {bottles.map((bottle) => (
-            <Link
-              key={bottle.id}
-              href={`/bottle/${bottle.id}`}
-              className="block rounded-lg border bg-card overflow-hidden hover:shadow-lg transition-shadow"
-            >
-              <div className="flex items-center gap-4">
-                {/* Thumbnail */}
-                <div className="relative w-20 h-20 flex-shrink-0 bg-muted">
-                  {bottle.labelImageUrl ? (
+            return (
+              <Link
+                key={bottle.id}
+                href={`/bottle/${bottle.id}`}
+                className="group relative block overflow-hidden rounded-xl border border-amber-900/30 bg-gradient-to-br from-[#2A1F1A] to-[#1A1410] hover:scale-105 transition-all shadow-lg hover:shadow-amber-900/20"
+              >
+                {/* Label Image */}
+                <div className="relative w-full h-48 bg-[#1A1410]">
+                  {(bottle.labelImageUrl || bottle.wine?.primaryLabelImageUrl) ? (
                     <Image
-                      src={bottle.labelImageUrl}
+                      src={bottle.labelImageUrl || bottle.wine?.primaryLabelImageUrl || ''}
                       alt={`${bottle.wine?.name || 'Wine'} label`}
                       fill
-                      className="object-cover"
-                      sizes="80px"
+                      className="object-cover group-hover:scale-105 transition-transform"
+                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                     />
                   ) : (
                     <div className="flex items-center justify-center h-full">
-                      <Wine className={`h-8 w-8 ${bottle.wine ? getWineTypeColor(bottle.wine.wineType) : 'text-gray-400'}`} />
+                      <WineTypeIcon type={wineType} className="w-16 h-16" />
                     </div>
                   )}
                 </div>
 
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-3">
-                    <h3 className="font-semibold truncate">
-                      {bottle.wine?.fullName || 'Unknown Wine'}
-                    </h3>
+                <div className="p-6">
+                  <div className="flex justify-between items-start mb-4">
+                    <WineTypeIcon type={wineType} className="w-8 h-8" />
                     {getStatusBadge(bottle.status)}
                   </div>
-                  <p className="text-sm text-muted-foreground">
-                    {bottle.wine?.region}, {bottle.wine?.country}
-                    {bottle.purchasePrice && (
-                      <>
-                        {' • '}
-                        {bottle.currency} {(parseFloat(bottle.purchasePrice) * bottle.quantity).toFixed(2)}
-                        {bottle.quantity > 1 && (
-                          <span className="text-xs">
-                            {' '}({bottle.currency} {parseFloat(bottle.purchasePrice).toFixed(2)}/bottle)
-                          </span>
-                        )}
-                      </>
-                    )}
-                    {bottle.quantity > 0 && ` • ${bottle.quantity} bottle${bottle.quantity > 1 ? 's' : ''}`}
-                  </p>
-                </div>
 
-                {bottle.rating && (
-                  <div className="flex gap-1 flex-shrink-0">
-                    {Array.from({ length: 5 }).map((_, i) => (
-                      <span
-                        key={i}
-                        className={`text-sm ${i < bottle.rating! ? 'text-yellow-500' : 'text-gray-300'}`}
-                      >
-                        ★
-                      </span>
-                    ))}
+                  <h3 className={`${playfair.className} font-semibold text-lg mb-1 text-gray-100`}>
+                    {bottle.wine?.name || 'Unknown Wine'}
+                  </h3>
+                  <p className="text-sm text-gray-300 mb-3">
+                    {bottle.wine?.producerName}
+                    {bottle.wine?.vintage && ` • ${bottle.wine.vintage}`}
+                  </p>
+
+                  <div className="space-y-2 text-sm">
+                    <div className="flex items-center gap-2 text-gray-400">
+                      <MapPin className="h-4 w-4" />
+                      {bottle.wine?.region}, {bottle.wine?.country}
+                    </div>
+
+                    {bottle.purchasePrice && (
+                      <div className="flex items-center gap-2 text-amber-400">
+                        <DollarSign className="h-4 w-4" />
+                        <span>
+                          {bottle.currency} {(parseFloat(bottle.purchasePrice) * bottle.quantity).toFixed(2)}
+                          {bottle.quantity > 1 && (
+                            <span className="text-xs ml-1 text-gray-400">
+                              ({bottle.currency} {parseFloat(bottle.purchasePrice).toFixed(2)}/bottle)
+                            </span>
+                          )}
+                        </span>
+                      </div>
+                    )}
+
+                    {bottle.quantity > 0 && (
+                      <div className="flex items-center gap-2 text-gray-400">
+                        <WineTypeIcon type={wineType} className="w-4 h-4" />
+                        {bottle.quantity} bottle{bottle.quantity > 1 ? 's' : ''}
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-            </Link>
-          ))}
+
+                  {bottle.rating && (
+                    <div className="mt-3 pt-3 border-t border-amber-900/20">
+                      <div className="flex gap-1">
+                        {Array.from({ length: 5 }).map((_, i) => (
+                          <span
+                            key={i}
+                            className={i < bottle.rating! ? 'text-amber-400' : 'text-gray-600'}
+                          >
+                            ★
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </Link>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {bottles.map((bottle) => {
+            const wineType = (bottle.wine?.wineType?.toLowerCase() || null) as WineType | null;
+
+            return (
+              <Link
+                key={bottle.id}
+                href={`/bottle/${bottle.id}`}
+                className="block rounded-xl border border-amber-900/30 bg-gradient-to-br from-[#2A1F1A] to-[#1A1410] overflow-hidden hover:scale-[1.02] transition-all shadow-lg hover:shadow-amber-900/20"
+              >
+                <div className="flex items-center gap-4 p-4">
+                  {/* Thumbnail */}
+                  <div className="relative w-20 h-20 flex-shrink-0 bg-[#1A1410] rounded-lg overflow-hidden">
+                    {bottle.labelImageUrl ? (
+                      <Image
+                        src={bottle.labelImageUrl}
+                        alt={`${bottle.wine?.name || 'Wine'} label`}
+                        fill
+                        className="object-cover"
+                        sizes="80px"
+                      />
+                    ) : (
+                      <div className="flex items-center justify-center h-full">
+                        <WineTypeIcon type={wineType} className="w-10 h-10" />
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-3 mb-1">
+                      <h3 className={`${playfair.className} font-semibold truncate text-gray-100`}>
+                        {bottle.wine?.fullName || 'Unknown Wine'}
+                      </h3>
+                      {getStatusBadge(bottle.status)}
+                    </div>
+                    <p className="text-sm text-gray-300">
+                      {bottle.wine?.region}, {bottle.wine?.country}
+                      {bottle.purchasePrice && (
+                        <>
+                          {' • '}
+                          <span className="text-amber-400">
+                            {bottle.currency} {(parseFloat(bottle.purchasePrice) * bottle.quantity).toFixed(2)}
+                          </span>
+                          {bottle.quantity > 1 && (
+                            <span className="text-xs text-gray-400">
+                              {' '}({bottle.currency} {parseFloat(bottle.purchasePrice).toFixed(2)}/bottle)
+                            </span>
+                          )}
+                        </>
+                      )}
+                      {bottle.quantity > 0 && (
+                        <span className="text-gray-400">
+                          {' • '}{bottle.quantity} bottle{bottle.quantity > 1 ? 's' : ''}
+                        </span>
+                      )}
+                    </p>
+                  </div>
+
+                  {bottle.rating && (
+                    <div className="flex gap-1 flex-shrink-0">
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <span
+                          key={i}
+                          className={`text-sm ${i < bottle.rating! ? 'text-amber-400' : 'text-gray-600'}`}
+                        >
+                          ★
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </Link>
+            );
+          })}
         </div>
       )}
     </div>
