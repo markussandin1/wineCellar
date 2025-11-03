@@ -333,19 +333,19 @@ export default function DesignSystemPage() {
 
             <div>
               <h1 className={`${playfair.className} text-6xl font-bold mb-2`}>Display Heading</h1>
-              <p className="text-sm text-gray-300">font-['Playfair_Display'] • text-6xl font-bold • text-white</p>
+              <p className="text-sm text-gray-300">font-[&apos;Playfair_Display&apos;] • text-6xl font-bold • text-white</p>
             </div>
             <div>
               <h2 className={`${playfair.className} text-5xl font-bold mb-2`}>Page Title</h2>
-              <p className="text-sm text-gray-300">font-['Playfair_Display'] • text-5xl font-bold • text-white</p>
+              <p className="text-sm text-gray-300">font-[&apos;Playfair_Display&apos;] • text-5xl font-bold • text-white</p>
             </div>
             <div>
               <h3 className={`${playfair.className} text-3xl font-semibold mb-2`}>Section Header</h3>
-              <p className="text-sm text-gray-300">font-['Playfair_Display'] • text-3xl font-semibold • text-white or text-amber-400</p>
+              <p className="text-sm text-gray-300">font-[&apos;Playfair_Display&apos;] • text-3xl font-semibold • text-white or text-amber-400</p>
             </div>
             <div>
               <h4 className={`${playfair.className} text-xl font-semibold mb-2 text-gray-100`}>Card Title</h4>
-              <p className="text-sm text-gray-300">font-['Playfair_Display'] • text-xl font-semibold • text-gray-100 or text-white</p>
+              <p className="text-sm text-gray-300">font-[&apos;Playfair_Display&apos;] • text-xl font-semibold • text-gray-100 or text-white</p>
             </div>
           </div>
 
@@ -355,21 +355,21 @@ export default function DesignSystemPage() {
 
             <div>
               <p className="text-base text-gray-100 mb-2">Body text with excellent readability in the wine cellar dark theme. Use text-gray-100 to reduce eye strain compared to pure white.</p>
-              <p className="text-sm text-gray-300">font-['Inter'] • text-base • text-gray-100 (recommended for paragraphs)</p>
+              <p className="text-sm text-gray-300">font-[&apos;Inter&apos;] • text-base • text-gray-100 (recommended for paragraphs)</p>
             </div>
             <div>
               <p className="text-sm text-gray-300 mb-2">Secondary text for metadata and descriptions.</p>
-              <p className="text-sm text-gray-300">font-['Inter'] • text-sm • text-gray-300 (WCAG AA compliant)</p>
+              <p className="text-sm text-gray-300">font-[&apos;Inter&apos;] • text-sm • text-gray-300 (WCAG AA compliant)</p>
             </div>
             <div>
               <p className="text-xs text-gray-400 mb-2">Tiny text for labels and captions (use sparingly).</p>
-              <p className="text-sm text-gray-300">font-['Inter'] • text-xs • text-gray-400 (non-essential info only)</p>
+              <p className="text-sm text-gray-300">font-[&apos;Inter&apos;] • text-xs • text-gray-400 (non-essential info only)</p>
             </div>
             <div>
               <button className="px-6 py-3 bg-gradient-to-r from-amber-400 to-yellow-500 text-black font-semibold rounded-lg">
                 Button Text
               </button>
-              <p className="text-sm text-gray-300 mt-2">font-['Inter'] • font-semibold • Used in all buttons</p>
+              <p className="text-sm text-gray-300 mt-2">font-[&apos;Inter&apos;] • font-semibold • Used in all buttons</p>
             </div>
           </div>
 
