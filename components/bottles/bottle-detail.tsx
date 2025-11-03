@@ -4,10 +4,11 @@ import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { Wine, MapPin, Calendar, DollarSign, Trash2, Edit, ArrowLeft, GlassWater } from 'lucide-react';
+import { Trash2, Edit, ArrowLeft, GlassWater } from 'lucide-react';
 import { deleteBottle } from '@/app/actions/bottle';
 import { ConsumeBottleModal } from './consume-bottle-modal';
 import { EditBottleModal } from './edit-bottle-modal';
+import { WineTypeIcon, playfair } from '@/lib/design-system';
 
 type Bottle = {
   id: string;
@@ -111,18 +112,6 @@ export function BottleDetail({ bottle }: { bottle: Bottle }) {
     }
   };
 
-  const getWineTypeColor = (type: string) => {
-    const colors = {
-      red: 'text-red-600 dark:text-red-400',
-      white: 'text-yellow-600 dark:text-yellow-400',
-      rose: 'text-pink-600 dark:text-pink-400',
-      sparkling: 'text-blue-600 dark:text-blue-400',
-      dessert: 'text-amber-600 dark:text-amber-400',
-      fortified: 'text-purple-600 dark:text-purple-400',
-    };
-    return colors[type as keyof typeof colors] || 'text-gray-600';
-  };
-
   return (
     <>
       <div className="space-y-6">
@@ -130,7 +119,7 @@ export function BottleDetail({ bottle }: { bottle: Bottle }) {
         <div className="flex items-center justify-between">
           <Link
             href="/cellar"
-            className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
+            className="inline-flex items-center gap-2 text-sm text-amber-400 hover:text-yellow-400 transition-colors font-medium"
           >
             <ArrowLeft className="h-4 w-4" />
             Back to Cellar
@@ -138,7 +127,7 @@ export function BottleDetail({ bottle }: { bottle: Bottle }) {
           <div className="flex gap-2">
             <button
               onClick={() => setShowEditModal(true)}
-              className="inline-flex items-center gap-2 rounded-md border bg-background px-3 py-2 text-sm font-medium hover:bg-accent"
+              className="inline-flex items-center gap-2 rounded-lg border border-amber-900/30 bg-[#2A1F1A] px-3 py-2 text-sm font-semibold text-amber-400 hover:bg-[#3A2F2A] hover:border-amber-400/50 transition-all"
             >
               <Edit className="h-4 w-4" />
               Edit
@@ -146,7 +135,7 @@ export function BottleDetail({ bottle }: { bottle: Bottle }) {
             {bottle.status === 'in_cellar' && bottle.quantity > 0 && (
               <button
                 onClick={() => setShowConsumeModal(true)}
-                className="inline-flex items-center gap-2 rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+                className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-amber-400 to-yellow-500 px-3 py-2 text-sm font-semibold text-black hover:from-amber-500 hover:to-yellow-600 hover:scale-105 shadow-lg shadow-amber-500/20 transition-all"
               >
                 <GlassWater className="h-4 w-4" />
                 Mark as Consumed
@@ -154,7 +143,7 @@ export function BottleDetail({ bottle }: { bottle: Bottle }) {
             )}
             <button
               onClick={() => setShowDeleteConfirm(true)}
-              className="inline-flex items-center gap-2 rounded-md border border-destructive bg-background px-3 py-2 text-sm font-medium text-destructive hover:bg-destructive hover:text-destructive-foreground"
+              className="inline-flex items-center gap-2 rounded-lg border border-red-900/30 bg-[#2A1F1A] px-3 py-2 text-sm font-semibold text-red-400 hover:bg-red-900/20 hover:border-red-400/50 transition-all"
             >
               <Trash2 className="h-4 w-4" />
               Delete
@@ -164,8 +153,9 @@ export function BottleDetail({ bottle }: { bottle: Bottle }) {
 
         {/* Label Image */}
         {(bottle.labelImageUrl || bottle.wine?.primaryLabelImageUrl) && (
-          <div className="rounded-lg border bg-card overflow-hidden">
-            <div className="relative w-full h-96">
+          <div className="relative overflow-hidden rounded-xl border border-amber-900/30 bg-gradient-to-br from-[#2A1F1A] to-[#1A1410]">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-amber-400/10 to-yellow-500/5 rounded-full blur-3xl" />
+            <div className="relative w-full h-96 bg-[#1A1410]">
               <Image
                 src={bottle.labelImageUrl || bottle.wine?.primaryLabelImageUrl || ''}
                 alt={`${bottle.wine?.name || 'Wine'} label`}
@@ -179,63 +169,70 @@ export function BottleDetail({ bottle }: { bottle: Bottle }) {
         )}
 
         {/* Wine Header */}
-        <div className="rounded-lg border bg-card p-6">
-          <div className="flex items-start gap-4 mb-6">
-            <Wine className={`h-12 w-12 ${bottle.wine ? getWineTypeColor(bottle.wine.wineType) : 'text-gray-400'}`} />
+        <div className="relative overflow-hidden rounded-xl border border-amber-900/30 bg-gradient-to-br from-[#2A1F1A] to-[#1A1410] p-6">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-amber-400/10 to-yellow-500/5 rounded-full blur-3xl" />
+          <div className="relative flex items-start gap-4 mb-6">
+            <WineTypeIcon
+              type={(bottle.wine?.wineType as 'red' | 'white' | 'rose' | 'sparkling' | 'dessert' | 'fortified') || 'red'}
+              className="flex-shrink-0"
+            />
             <div className="flex-1">
-              <h1 className="text-3xl font-bold mb-2">{bottle.wine?.fullName || 'Unknown Wine'}</h1>
-              <p className="text-lg text-muted-foreground">
+              <h1 className={`${playfair.className} text-3xl font-bold mb-2 text-gray-100`}>
+                {bottle.wine?.fullName || 'Unknown Wine'}
+              </h1>
+              <p className="text-lg text-gray-300">
                 {bottle.wine?.producerName}
                 {bottle.wine?.vintage && ` • ${bottle.wine.vintage}`}
               </p>
               {bottle.wine?.aiGeneratedSummary && (
-                <p className="mt-4 text-base leading-relaxed text-foreground/80">
+                <p className="mt-4 text-base leading-relaxed text-gray-300">
                   {bottle.wine.aiGeneratedSummary}
                 </p>
               )}
             </div>
             <div className="text-right">
-              <div className="text-sm text-muted-foreground">Status</div>
-              <div className="text-lg font-semibold">
+              <div className="text-sm text-gray-400">Status</div>
+              <div className="text-lg font-semibold text-gray-100">
                 {statusLabels[bottle.status] || bottle.status.replace('_', ' ')}
               </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="relative grid grid-cols-1 md:grid-cols-3 gap-6">
             <div>
-              <div className="text-sm font-medium text-muted-foreground mb-1">Wine Type</div>
-              <div className="capitalize">{bottle.wine?.wineType}</div>
+              <div className="text-sm font-medium text-gray-400 mb-1">Wine Type</div>
+              <div className="capitalize text-gray-100">{bottle.wine?.wineType}</div>
             </div>
             <div>
-              <div className="text-sm font-medium text-muted-foreground mb-1">Region</div>
-              <div>
+              <div className="text-sm font-medium text-gray-400 mb-1">Region</div>
+              <div className="text-gray-100">
                 {bottle.wine?.region}, {bottle.wine?.country}
-                {bottle.wine?.subRegion && <div className="text-sm text-muted-foreground">{bottle.wine.subRegion}</div>}
+                {bottle.wine?.subRegion && <div className="text-sm text-gray-400">{bottle.wine.subRegion}</div>}
               </div>
             </div>
             <div>
-              <div className="text-sm font-medium text-muted-foreground mb-1">Grape</div>
-              <div>{bottle.wine?.primaryGrape || 'Not specified'}</div>
+              <div className="text-sm font-medium text-gray-400 mb-1">Grape</div>
+              <div className="text-gray-100">{bottle.wine?.primaryGrape || 'Not specified'}</div>
             </div>
           </div>
         </div>
 
         {/* Bottle Details - Your cellar information */}
-        <div className="rounded-lg border bg-card p-6">
-          <h2 className="text-xl font-semibold mb-4">Bottle Details</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="relative overflow-hidden rounded-xl border border-amber-900/30 bg-gradient-to-br from-[#2A1F1A] to-[#1A1410] p-6">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-amber-400/10 to-yellow-500/5 rounded-full blur-3xl" />
+          <h2 className={`${playfair.className} relative text-xl font-semibold mb-4 text-gray-100`}>Bottle Details</h2>
+          <div className="relative grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <div className="text-sm font-medium text-muted-foreground mb-1">Quantity</div>
-              <div className="text-lg">{bottle.quantity} bottle{bottle.quantity > 1 ? 's' : ''}</div>
+              <div className="text-sm font-medium text-gray-400 mb-1">Quantity</div>
+              <div className="text-lg text-gray-100">{bottle.quantity} bottle{bottle.quantity > 1 ? 's' : ''}</div>
             </div>
             {bottle.purchasePrice && (
               <div>
-                <div className="text-sm font-medium text-muted-foreground mb-1">Purchase Price</div>
-                <div className="text-lg">
+                <div className="text-sm font-medium text-gray-400 mb-1">Purchase Price</div>
+                <div className="text-lg text-gray-100">
                   {bottle.currency} {parseFloat(bottle.purchasePrice).toFixed(2)} per bottle
                   {bottle.quantity > 1 && (
-                    <div className="text-sm text-muted-foreground mt-1">
+                    <div className="text-sm text-gray-400 mt-1">
                       Total value: {bottle.currency} {(parseFloat(bottle.purchasePrice) * bottle.quantity).toFixed(2)}
                     </div>
                   )}
@@ -244,41 +241,41 @@ export function BottleDetail({ bottle }: { bottle: Bottle }) {
             )}
             {bottle.purchaseDate && (
               <div>
-                <div className="text-sm font-medium text-muted-foreground mb-1">Purchase Date</div>
-                <div>{formatDate(bottle.purchaseDate)}</div>
+                <div className="text-sm font-medium text-gray-400 mb-1">Purchase Date</div>
+                <div className="text-gray-100">{formatDate(bottle.purchaseDate)}</div>
               </div>
             )}
             {bottle.purchaseLocation && (
               <div>
-                <div className="text-sm font-medium text-muted-foreground mb-1">Purchased From</div>
-                <div>{bottle.purchaseLocation}</div>
+                <div className="text-sm font-medium text-gray-400 mb-1">Purchased From</div>
+                <div className="text-gray-100">{bottle.purchaseLocation}</div>
               </div>
             )}
             {bottle.storageLocation && (
               <div>
-                <div className="text-sm font-medium text-muted-foreground mb-1">Storage Location</div>
-                <div>{bottle.storageLocation}</div>
+                <div className="text-sm font-medium text-gray-400 mb-1">Storage Location</div>
+                <div className="text-gray-100">{bottle.storageLocation}</div>
               </div>
             )}
             <div>
-              <div className="text-sm font-medium text-muted-foreground mb-1">Acquisition</div>
-              <div className="capitalize">{bottle.acquisitionMethod}</div>
+              <div className="text-sm font-medium text-gray-400 mb-1">Acquisition</div>
+              <div className="capitalize text-gray-100">{bottle.acquisitionMethod}</div>
             </div>
           </div>
 
           {bottle.personalNotes && (
-            <div className="mt-6 pt-6 border-t">
-              <div className="text-sm font-medium text-muted-foreground mb-2">Personal Notes</div>
-              <div className="text-sm">{bottle.personalNotes}</div>
+            <div className="relative mt-6 pt-6 border-t border-amber-900/20">
+              <div className="text-sm font-medium text-gray-400 mb-2">Personal Notes</div>
+              <div className="text-sm text-gray-300">{bottle.personalNotes}</div>
             </div>
           )}
 
           {bottle.rating && (
-            <div className="mt-6 pt-6 border-t">
-              <div className="text-sm font-medium text-muted-foreground mb-2">Your Rating</div>
+            <div className="relative mt-6 pt-6 border-t border-amber-900/20">
+              <div className="text-sm font-medium text-gray-400 mb-2">Your Rating</div>
               <div className="flex gap-1">
                 {Array.from({ length: 5 }).map((_, i) => (
-                  <span key={i} className={`text-2xl ${i < bottle.rating! ? 'text-yellow-500' : 'text-gray-300'}`}>
+                  <span key={i} className={`text-2xl ${i < bottle.rating! ? 'text-amber-400' : 'text-gray-600'}`}>
                     ★
                   </span>
                 ))}
@@ -287,11 +284,11 @@ export function BottleDetail({ bottle }: { bottle: Bottle }) {
           )}
 
           {bottle.tags.length > 0 && (
-            <div className="mt-6 pt-6 border-t">
-              <div className="text-sm font-medium text-muted-foreground mb-2">Tags</div>
+            <div className="relative mt-6 pt-6 border-t border-amber-900/20">
+              <div className="text-sm font-medium text-gray-400 mb-2">Tags</div>
               <div className="flex flex-wrap gap-2">
                 {bottle.tags.map((tag) => (
-                  <span key={tag} className="px-2 py-1 rounded-full text-xs bg-secondary">
+                  <span key={tag} className="px-3 py-1 rounded-full text-xs font-medium bg-amber-900/30 border border-amber-500/30 text-amber-400">
                     {tag}
                   </span>
                 ))}
@@ -302,13 +299,14 @@ export function BottleDetail({ bottle }: { bottle: Bottle }) {
 
         {/* Wine Profile - Detailed description */}
         {parsedDescription.length > 0 && (
-          <div className="rounded-lg border bg-card p-6">
-            <h2 className="text-xl font-semibold mb-4">Wine Profile</h2>
-            <div className="space-y-4 text-sm leading-relaxed text-foreground/80">
+          <div className="relative overflow-hidden rounded-xl border border-amber-900/30 bg-gradient-to-br from-[#2A1F1A] to-[#1A1410] p-6">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-amber-400/10 to-yellow-500/5 rounded-full blur-3xl" />
+            <h2 className={`${playfair.className} relative text-xl font-semibold mb-4 text-gray-100`}>Wine Profile</h2>
+            <div className="relative space-y-4 text-sm leading-relaxed text-gray-300">
               {parsedDescription.map((block, index) => {
                 if (block.type === 'paragraph') {
                   return (
-                    <p key={index} className="text-base">
+                    <p key={index} className="text-base text-gray-300">
                       {block.body}
                     </p>
                   );
@@ -317,20 +315,20 @@ export function BottleDetail({ bottle }: { bottle: Bottle }) {
                 if (block.type === 'section') {
                   return (
                     <div key={index} className="space-y-2">
-                      <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                      <h3 className="text-sm font-semibold uppercase tracking-wide text-amber-400">
                         {block.title}
                       </h3>
-                      <p className="whitespace-pre-line text-base">{block.body}</p>
+                      <p className="whitespace-pre-line text-base text-gray-300">{block.body}</p>
                     </div>
                   );
                 }
 
                 return (
                   <div key={index} className="space-y-2">
-                    <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                    <h3 className="text-sm font-semibold uppercase tracking-wide text-amber-400">
                       {block.title}
                     </h3>
-                    <ul className="list-disc list-inside space-y-1">
+                    <ul className="list-disc list-inside space-y-1 text-gray-300">
                       {block.items?.map((item, idx) => (
                         <li key={idx}>{item}</li>
                       ))}
@@ -344,25 +342,26 @@ export function BottleDetail({ bottle }: { bottle: Bottle }) {
 
         {/* Consumption History */}
         {bottle.consumptionLogs.length > 0 && (
-          <div className="rounded-lg border bg-card p-6">
-            <h2 className="text-xl font-semibold mb-4">Consumption History</h2>
-            <div className="space-y-4">
+          <div className="relative overflow-hidden rounded-xl border border-amber-900/30 bg-gradient-to-br from-[#2A1F1A] to-[#1A1410] p-6">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-amber-400/10 to-yellow-500/5 rounded-full blur-3xl" />
+            <h2 className={`${playfair.className} relative text-xl font-semibold mb-4 text-gray-100`}>Consumption History</h2>
+            <div className="relative space-y-4">
               {bottle.consumptionLogs.map((log) => (
-                <div key={log.id} className="border-l-2 border-primary pl-4">
+                <div key={log.id} className="border-l-2 border-amber-400 pl-4">
                   <div className="flex justify-between items-start mb-1">
-                    <div className="font-medium">{formatDate(log.consumedDate)}</div>
+                    <div className="font-medium text-gray-100">{formatDate(log.consumedDate)}</div>
                     {log.rating && (
                       <div className="flex gap-1">
                         {Array.from({ length: 5 }).map((_, i) => (
-                          <span key={i} className={`text-sm ${i < log.rating! ? 'text-yellow-500' : 'text-gray-300'}`}>
+                          <span key={i} className={`text-sm ${i < log.rating! ? 'text-amber-400' : 'text-gray-600'}`}>
                             ★
                           </span>
                         ))}
                       </div>
                     )}
                   </div>
-                  {log.occasion && <div className="text-sm text-muted-foreground">{log.occasion}</div>}
-                  {log.tastingNotes && <div className="text-sm mt-2">{log.tastingNotes}</div>}
+                  {log.occasion && <div className="text-sm text-gray-400">{log.occasion}</div>}
+                  {log.tastingNotes && <div className="text-sm mt-2 text-gray-300">{log.tastingNotes}</div>}
                 </div>
               ))}
             </div>
@@ -372,24 +371,25 @@ export function BottleDetail({ bottle }: { bottle: Bottle }) {
 
       {/* Delete Confirmation Modal */}
       {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-card rounded-lg p-6 max-w-md w-full mx-4">
-            <h3 className="text-lg font-semibold mb-2">Delete Bottle?</h3>
-            <p className="text-muted-foreground mb-6">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="relative overflow-hidden rounded-xl border border-amber-900/30 bg-gradient-to-br from-[#2A1F1A] to-[#1A1410] p-6 max-w-md w-full mx-4">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-red-400/10 to-red-500/5 rounded-full blur-3xl" />
+            <h3 className={`${playfair.className} relative text-lg font-semibold mb-2 text-gray-100`}>Delete Bottle?</h3>
+            <p className="relative text-gray-300 mb-6">
               Are you sure you want to delete this bottle? This action cannot be undone.
             </p>
-            <div className="flex gap-3 justify-end">
+            <div className="relative flex gap-3 justify-end">
               <button
                 onClick={() => setShowDeleteConfirm(false)}
                 disabled={isDeleting}
-                className="rounded-md border bg-background px-4 py-2 text-sm font-medium hover:bg-accent"
+                className="rounded-lg border border-amber-900/30 bg-[#2A1F1A] px-4 py-2 text-sm font-semibold text-amber-400 hover:bg-[#3A2F2A] hover:border-amber-400/50 transition-all disabled:opacity-50"
               >
                 Cancel
               </button>
               <button
                 onClick={handleDelete}
                 disabled={isDeleting}
-                className="rounded-md bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground hover:bg-destructive/90 disabled:opacity-50"
+                className="rounded-lg bg-gradient-to-r from-red-500 to-red-600 px-4 py-2 text-sm font-semibold text-white hover:from-red-600 hover:to-red-700 hover:scale-105 shadow-lg shadow-red-500/20 transition-all disabled:opacity-50"
               >
                 {isDeleting ? 'Deleting...' : 'Delete'}
               </button>

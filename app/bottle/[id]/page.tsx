@@ -23,8 +23,10 @@ export default async function BottlePage({ params }: { params: Promise<{ id: str
     }
 
     return (
-      <div className="container mx-auto px-4 py-8 max-w-4xl">
-        <BottleDetail bottle={bottle} />
+      <div className="min-h-screen bg-gradient-to-br from-[#0A0A0A] via-[#1A1410] to-[#0A0A0A]">
+        <div className="container mx-auto px-4 py-8 max-w-4xl">
+          <BottleDetail bottle={bottle} />
+        </div>
       </div>
     );
   } catch (error) {
