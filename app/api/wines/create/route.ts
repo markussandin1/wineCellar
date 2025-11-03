@@ -27,9 +27,9 @@ export async function POST(request: NextRequest) {
     } = body;
 
     // Validate required fields
-    if (!name || !producerName || !wineType || !country || !region) {
+    if (!name || !producerName) {
       return NextResponse.json(
-        { error: 'Missing required fields: name, producerName, wineType, country, region' },
+        { error: 'Missing required fields: name, producerName' },
         { status: 400 }
       );
     }

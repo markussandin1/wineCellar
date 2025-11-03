@@ -49,6 +49,11 @@ export function PurchaseDetailsFields() {
   const { register, watch } = useFormContext<BottleFormValues>();
   const isWatchList = watch('isWatchList');
 
+  // Don't show purchase details for watch list items
+  if (isWatchList) {
+    return null;
+  }
+
   return (
     <div className="space-y-4">
       <h2 className="text-lg font-semibold">Purchase Details</h2>
@@ -74,17 +79,13 @@ export function PurchaseDetailsFields() {
 
         <div>
           <label htmlFor="quantity" className="block text-sm font-medium mb-2">
-            Quantity{isWatchList ? '' : ' *'}
+            Quantity *
           </label>
           <input
             id="quantity"
             type="number"
             min={0}
-            className={clsx(
-              'w-full rounded-md border bg-background px-3 py-2',
-              isWatchList && 'disabled:opacity-70'
-            )}
-            disabled={isWatchList}
+            className="w-full rounded-md border bg-background px-3 py-2"
             {...register('quantity', { valueAsNumber: true })}
           />
           <FieldError name="quantity" />
@@ -178,34 +179,37 @@ export function PurchaseDetailsFields() {
 }
 
 export function StorageNotesFields() {
-  const { register } = useFormContext<BottleFormValues>();
+  const { register, watch } = useFormContext<BottleFormValues>();
+  const isWatchList = watch('isWatchList');
 
   return (
     <div className="space-y-4">
-      <h2 className="text-lg font-semibold">Storage & Notes</h2>
+      <h2 className="text-lg font-semibold">{isWatchList ? 'Notes' : 'Storage & Notes'}</h2>
 
-      <div>
-        <label htmlFor="storageLocation" className="block text-sm font-medium mb-2">
-          Storage Location
-        </label>
-        <input
-          id="storageLocation"
-          type="text"
-          className="w-full rounded-md border bg-background px-3 py-2"
-          placeholder="Rack A, Shelf 3"
-          {...register('storageLocation')}
-        />
-      </div>
+      {!isWatchList && (
+        <div>
+          <label htmlFor="storageLocation" className="block text-sm font-medium mb-2">
+            Storage Location
+          </label>
+          <input
+            id="storageLocation"
+            type="text"
+            className="w-full rounded-md border bg-background px-3 py-2"
+            placeholder="Rack A, Shelf 3"
+            {...register('storageLocation')}
+          />
+        </div>
+      )}
 
       <div>
         <label htmlFor="personalNotes" className="block text-sm font-medium mb-2">
-          Personal Notes
+          {isWatchList ? 'Notes (Why do you want this wine?)' : 'Personal Notes'}
         </label>
         <textarea
           id="personalNotes"
           rows={3}
           className="w-full rounded-md border bg-background px-3 py-2"
-          placeholder="Any notes about this bottle..."
+          placeholder={isWatchList ? "e.g., Saw at restaurant, want to try..." : "Any notes about this bottle..."}
           {...register('personalNotes')}
         />
       </div>

@@ -18,16 +18,11 @@ interface ExtractedData {
   primaryGrape?: string;
   confidence: number;
   existingWineId?: string;
-  imageUrl?: string | null;
+  imageUrl?: string | null; // User's scanned image
+  wineImageUrl?: string | null; // Wine's official image from database
   description?: string;
   tastingNotes?: string;
   aiGeneratedSummary?: string;
-  estimatedPrice?: {
-    amount?: number;
-    currency?: string;
-    confidence?: number;
-    reasoning?: string;
-  };
 }
 
 interface BatchItem {

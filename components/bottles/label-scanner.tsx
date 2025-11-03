@@ -19,14 +19,9 @@ interface ExtractedData {
   primaryGrape?: string;
   confidence: number;
   existingWineId?: string; // If we found a match in DB
-  imageUrl?: string | null; // Uploaded label image URL
+  imageUrl?: string | null; // User's scanned label image URL (for their bottle)
+  wineImageUrl?: string | null; // Wine's official label image from database
   enrichmentData?: any; // Wine enrichment data if available
-  estimatedPrice?: {
-    amount?: number;
-    currency?: string;
-    confidence?: number;
-    reasoning?: string;
-  };
 }
 
 interface LabelScannerProps {
@@ -94,6 +89,13 @@ export function LabelScanner({ initialPlacement, userCurrency }: LabelScannerPro
       // Step 2: If wine doesn't exist, create it with enrichment
       if (!scanData.existingWineId) {
         console.log('Wine not found, creating with enrichment...');
+        console.log('Scan data to be sent:', {
+          name: scanData.wineName,
+          producerName: scanData.producerName,
+          wineType: scanData.wineType,
+          country: scanData.country,
+          region: scanData.region,
+        });
         setStep('enriching');
 
         const createResponse = await fetch('/api/wines/create', {

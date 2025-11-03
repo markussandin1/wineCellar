@@ -129,6 +129,7 @@ export class WineEnrichmentAgent implements Agent<WineEnrichmentInput, WineEnric
       const userPrompt = wineEnrichmentConfig.buildUserPrompt(input);
 
       // Call OpenAI Chat API
+      // Note: gpt-5-mini only supports temperature=1 (default), so we omit it
       const response = await client.chat.completions.create({
         model: wineEnrichmentConfig.model,
         messages: [
@@ -141,8 +142,7 @@ export class WineEnrichmentAgent implements Agent<WineEnrichmentInput, WineEnric
             content: userPrompt,
           },
         ],
-        temperature: wineEnrichmentConfig.temperature,
-        max_tokens: wineEnrichmentConfig.maxTokens,
+        max_completion_tokens: wineEnrichmentConfig.maxTokens,
       });
 
       // Extract response text
@@ -157,6 +157,11 @@ export class WineEnrichmentAgent implements Agent<WineEnrichmentInput, WineEnric
 
       // Calculate latency
       const latencyMs = Date.now() - startTime;
+      const tokensUsed = response.usage?.total_tokens || 0;
+
+      // Log performance metrics
+      console.log(`[${this.name}] ✓ Success | Model: ${wineEnrichmentConfig.model} | Duration: ${(latencyMs / 1000).toFixed(2)}s | Tokens: ${tokensUsed}`);
+      console.log(`[${this.name}] Response:`, JSON.stringify(data, null, 2));
 
       return {
         success: true,
@@ -164,13 +169,17 @@ export class WineEnrichmentAgent implements Agent<WineEnrichmentInput, WineEnric
         confidence: 1.0,
         metadata: {
           model: wineEnrichmentConfig.model,
-          tokensUsed: response.usage?.total_tokens || 0,
+          tokensUsed,
           latencyMs,
           timestamp: new Date(),
         },
       };
     } catch (error) {
       const latencyMs = Date.now() - startTime;
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+      // Log error metrics
+      console.error(`[${this.name}] ✗ Error | Model: ${wineEnrichmentConfig.model} | Duration: ${(latencyMs / 1000).toFixed(2)}s | Error: ${errorMessage}`);
 
       if (error instanceof AgentError) {
         throw error;
@@ -178,7 +187,7 @@ export class WineEnrichmentAgent implements Agent<WineEnrichmentInput, WineEnric
 
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: errorMessage,
         metadata: {
           model: wineEnrichmentConfig.model,
           tokensUsed: 0,

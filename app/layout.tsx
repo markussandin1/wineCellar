@@ -10,14 +10,12 @@ export const metadata: Metadata = {
   title: "Wine Cellar - A Wine Collection Manager",
   description: "Track your wine collection effortlessly with label scanning and smart insights",
   manifest: "/manifest.json",
-  viewport: {
-    width: "device-width",
-    initialScale: 1,
-    maximumScale: 1,
-  },
 };
 
 export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
   themeColor: "#000000",
 };
 

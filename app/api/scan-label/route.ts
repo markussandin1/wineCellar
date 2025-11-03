@@ -3,14 +3,29 @@ import { createClient } from '@/lib/supabase/server';
 import { uploadLabelImage } from '@/lib/supabase';
 import { labelScanAgent } from '@/lib/ai/agents/label-scan';
 
+// Helper function to normalize text for comparison
+function normalize(text: string): string {
+  if (!text) return '';
+  return text
+    .toLowerCase()
+    .normalize('NFD') // Decompose accented characters
+    .replace(/[\u0300-\u036f]/g, '') // Remove accents
+    .replace(/[^a-z0-9\s]/g, '') // Remove special characters
+    .trim();
+}
+
 // Helper function to calculate string similarity (simple Levenshtein distance)
 function similarity(s1: string, s2: string): number {
-  const longer = s1.length > s2.length ? s1 : s2;
-  const shorter = s1.length > s2.length ? s2 : s1;
+  // Normalize both strings before comparison
+  const norm1 = normalize(s1);
+  const norm2 = normalize(s2);
+
+  const longer = norm1.length > norm2.length ? norm1 : norm2;
+  const shorter = norm1.length > norm2.length ? norm2 : norm1;
 
   if (longer.length === 0) return 1.0;
 
-  const editDistance = levenshteinDistance(longer.toLowerCase(), shorter.toLowerCase());
+  const editDistance = levenshteinDistance(longer, shorter);
   return (longer.length - editDistance) / longer.length;
 }
 
@@ -97,6 +112,9 @@ export async function POST(request: NextRequest) {
     let bestMatch = null;
     let bestScore = 0;
 
+    console.log(`Comparing extracted data against ${existingWines?.length || 0} candidates:`);
+    console.log(`  Extracted: "${extracted.wineName}" by "${extracted.producerName}" (${extracted.vintage || 'NV'})`);
+
     for (const wine of (existingWines || [])) {
       const nameScore = similarity(wine.name, extracted.wineName);
       const producerScore = similarity(wine.producer_name, extracted.producerName);
@@ -104,15 +122,18 @@ export async function POST(request: NextRequest) {
 
       const totalScore = (nameScore + producerScore) / 2;
 
-      // If we have a good match (>85% similarity) and vintage matches
-      if (totalScore > 0.85 && vintageMatch && totalScore > bestScore) {
+      console.log(`  Candidate: "${wine.name}" by "${wine.producer_name}" (${wine.vintage || 'NV'})`);
+      console.log(`    Name: ${(nameScore * 100).toFixed(1)}%, Producer: ${(producerScore * 100).toFixed(1)}%, Total: ${(totalScore * 100).toFixed(1)}%, Vintage match: ${vintageMatch}`);
+
+      // If we have a good match (>80% similarity) and vintage matches
+      if (totalScore > 0.80 && vintageMatch && totalScore > bestScore) {
         bestMatch = wine;
         bestScore = totalScore;
       }
     }
 
     if (bestMatch) {
-      console.log(`Found existing wine: ${bestMatch.name} (${bestScore * 100}% match)`);
+      console.log(`✓ Found existing wine: ${bestMatch.name} (${(bestScore * 100).toFixed(1)}% match)`);
 
       // Return existing wine data (FAST PATH - no AI enrichment needed)
       return NextResponse.json({
@@ -126,19 +147,18 @@ export async function POST(request: NextRequest) {
         primaryGrape: bestMatch.primary_grape,
         confidence: bestScore,
         existingWineId: bestMatch.id,
-        imageUrl,
+        imageUrl, // User's scanned image (saved to their bottle)
+        wineImageUrl: bestMatch.primary_label_image_url, // Wine's official image from database
         // Include enrichment data if available
         enrichmentData: bestMatch.enrichment_data,
         // Legacy fields for backward compatibility
         description: bestMatch.description,
         tastingNotes: bestMatch.tasting_notes,
         aiGeneratedSummary: bestMatch.ai_generated_summary,
-        // Include estimated price from agent
-        estimatedPrice: extracted.estimatedPrice,
       });
     }
 
-    console.log('No existing wine found, returning extracted data');
+    console.log('✗ No existing wine found matching criteria (>80% similarity + vintage match)');
 
     // No match found - return extracted data
     // Frontend will decide whether to create wine with enrichment
@@ -154,7 +174,6 @@ export async function POST(request: NextRequest) {
       confidence: extracted.confidence,
       existingWineId: null,
       imageUrl,
-      estimatedPrice: extracted.estimatedPrice,
     });
   } catch (error: any) {
     console.error('Label scanning error:', error);
