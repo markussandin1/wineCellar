@@ -16,7 +16,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
-  themeColor: "#000000",
+  themeColor: "#0A0A0A", // Wine Cellar Deep Black
 };
 
 export default function RootLayout({
