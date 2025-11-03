@@ -63,11 +63,6 @@ async function testLabelScan(imagePath: string) {
       console.log('  Sub-Region:', result.data.subRegion || 'Unknown');
       console.log('  Primary Grape:', result.data.primaryGrape || 'Unknown');
 
-      console.log('\n💰 Estimated Price:');
-      console.log('  Amount:', result.data.estimatedPrice.amount ? `€${result.data.estimatedPrice.amount}` : 'N/A');
-      console.log('  Confidence:', Math.round(result.data.estimatedPrice.confidence * 100) + '%');
-      console.log('  Reasoning:', result.data.estimatedPrice.reasoning);
-
       console.log('\n📈 Metadata:');
       console.log('  Overall Confidence:', Math.round((result.confidence || 0) * 100) + '%');
       console.log('  Model:', result.metadata.model);
