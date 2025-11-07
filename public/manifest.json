@@ -4,8 +4,8 @@
   "description": "Track your wine collection effortlessly with AI label scanning and smart insights",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#000000",
+  "background_color": "#0A0A0A",
+  "theme_color": "#1A1410",
   "orientation": "portrait",
   "icons": [
     {
