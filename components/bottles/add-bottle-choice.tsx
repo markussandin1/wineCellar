@@ -22,7 +22,7 @@ export function AddBottleChoice({ userCurrency }: AddBottleChoiceProps) {
       <div>
         <button
           onClick={() => setMode('choice')}
-          className="mb-4 text-sm text-muted-foreground hover:text-foreground"
+          className="mb-6 text-sm text-amber-400 hover:text-yellow-400 transition-colors font-medium"
         >
           ← Back to options
         </button>
@@ -36,7 +36,7 @@ export function AddBottleChoice({ userCurrency }: AddBottleChoiceProps) {
       <div>
         <button
           onClick={() => setMode('choice')}
-          className="mb-4 text-sm text-muted-foreground hover:text-foreground"
+          className="mb-6 text-sm text-amber-400 hover:text-yellow-400 transition-colors font-medium"
         >
           ← Back to options
         </button>
@@ -50,7 +50,7 @@ export function AddBottleChoice({ userCurrency }: AddBottleChoiceProps) {
       <div>
         <button
           onClick={() => setMode('choice')}
-          className="mb-4 text-sm text-muted-foreground hover:text-foreground"
+          className="mb-6 text-sm text-amber-400 hover:text-yellow-400 transition-colors font-medium"
         >
           ← Back to options
         </button>
@@ -60,26 +60,23 @@ export function AddBottleChoice({ userCurrency }: AddBottleChoiceProps) {
   }
 
   return (
-    <div className="space-y-4">
-      <p className="text-muted-foreground mb-6">
-        Choose how you&apos;d like to add your bottle
-      </p>
-
-      <div className="flex flex-col gap-3 rounded-lg border bg-muted/40 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+    <div className="space-y-6">
+      {/* Placement Selector */}
+      <div className="flex flex-col gap-3 rounded-xl border border-amber-900/30 bg-gradient-to-br from-[#2A1F1A] to-[#1A1410] px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-sm font-medium">Where should we save this wine?</p>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-sm font-semibold text-gray-100">Where should we save this wine?</p>
+          <p className="text-xs text-gray-400 mt-1">
             Use watch list to remember wines you enjoyed without adding them to your inventory.
           </p>
         </div>
-        <div className="inline-flex rounded-md border bg-background p-1">
+        <div className="inline-flex rounded-lg border border-amber-900/30 bg-[#1A1410] p-1">
           <button
             type="button"
             onClick={() => setPlacement('cellar')}
-            className={`px-3 py-1 text-sm font-medium rounded ${
+            className={`px-4 py-2 text-sm font-semibold rounded transition-all ${
               placement === 'cellar'
-                ? 'bg-primary text-primary-foreground'
-                : 'hover:bg-accent text-foreground'
+                ? 'bg-gradient-to-r from-amber-400 to-yellow-500 text-black'
+                : 'hover:bg-[#2A1F1A] text-gray-300'
             }`}
           >
             Cellar
@@ -87,10 +84,10 @@ export function AddBottleChoice({ userCurrency }: AddBottleChoiceProps) {
           <button
             type="button"
             onClick={() => setPlacement('watchlist')}
-            className={`px-3 py-1 text-sm font-medium rounded ${
+            className={`px-4 py-2 text-sm font-semibold rounded transition-all ${
               placement === 'watchlist'
-                ? 'bg-primary text-primary-foreground'
-                : 'hover:bg-accent text-foreground'
+                ? 'bg-gradient-to-r from-amber-400 to-yellow-500 text-black'
+                : 'hover:bg-[#2A1F1A] text-gray-300'
             }`}
           >
             Watch list
@@ -98,23 +95,24 @@ export function AddBottleChoice({ userCurrency }: AddBottleChoiceProps) {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Scan Single Label Option */}
         <button
           onClick={() => setMode('scan')}
-          className="group relative overflow-hidden rounded-lg border-2 border-border bg-card p-6 text-center transition-all hover:border-primary hover:bg-accent"
+          className="group relative overflow-hidden rounded-xl border border-amber-900/30 bg-gradient-to-br from-[#2A1F1A] to-[#1A1410] p-6 text-center transition-all hover:scale-105 hover:border-amber-500/50 shadow-lg hover:shadow-amber-900/20"
         >
-          <div className="flex flex-col items-center space-y-3">
-            <div className="rounded-full bg-primary/10 p-3 transition-colors group-hover:bg-primary/20">
-              <Camera className="h-6 w-6 text-primary" />
+          <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-amber-400/20 to-yellow-500/10 rounded-full blur-2xl" />
+          <div className="relative flex flex-col items-center space-y-3">
+            <div className="rounded-full bg-amber-900/30 p-3 transition-all group-hover:bg-amber-500/20 border border-amber-500/30">
+              <Camera className="h-6 w-6 text-amber-400" />
             </div>
             <div>
-              <h3 className="text-base font-semibold">Scan Label</h3>
-              <p className="mt-1 text-xs text-muted-foreground">
+              <h3 className="text-base font-semibold text-gray-100">Scan Label</h3>
+              <p className="mt-1 text-xs text-gray-400">
                 One photo at a time
               </p>
             </div>
-            <div className="mt-2 inline-flex items-center text-xs font-medium text-primary">
+            <div className="mt-2 inline-flex items-center text-xs font-medium text-amber-400">
               Quick & Easy
               <span className="ml-1">→</span>
             </div>
@@ -124,19 +122,20 @@ export function AddBottleChoice({ userCurrency }: AddBottleChoiceProps) {
         {/* Batch Scan Option */}
         <button
           onClick={() => setMode('batch')}
-          className="group relative overflow-hidden rounded-lg border-2 border-border bg-card p-6 text-center transition-all hover:border-primary hover:bg-accent"
+          className="group relative overflow-hidden rounded-xl border border-amber-900/30 bg-gradient-to-br from-[#2A1F1A] to-[#1A1410] p-6 text-center transition-all hover:scale-105 hover:border-amber-500/50 shadow-lg hover:shadow-amber-900/20"
         >
-          <div className="flex flex-col items-center space-y-3">
-            <div className="rounded-full bg-primary/10 p-3 transition-colors group-hover:bg-primary/20">
-              <Layers className="h-6 w-6 text-primary" />
+          <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-yellow-400/20 to-amber-500/10 rounded-full blur-2xl" />
+          <div className="relative flex flex-col items-center space-y-3">
+            <div className="rounded-full bg-amber-900/30 p-3 transition-all group-hover:bg-amber-500/20 border border-amber-500/30">
+              <Layers className="h-6 w-6 text-amber-400" />
             </div>
             <div>
-              <h3 className="text-base font-semibold">Batch Upload</h3>
-              <p className="mt-1 text-xs text-muted-foreground">
+              <h3 className="text-base font-semibold text-gray-100">Batch Upload</h3>
+              <p className="mt-1 text-xs text-gray-400">
                 Up to 20 bottles at once
               </p>
             </div>
-            <div className="mt-2 inline-flex items-center text-xs font-medium text-primary">
+            <div className="mt-2 inline-flex items-center text-xs font-medium text-amber-400">
               Power User
               <span className="ml-1">→</span>
             </div>
@@ -146,19 +145,20 @@ export function AddBottleChoice({ userCurrency }: AddBottleChoiceProps) {
         {/* Manual Entry Option */}
         <button
           onClick={() => setMode('manual')}
-          className="group relative overflow-hidden rounded-lg border-2 border-border bg-card p-6 text-center transition-all hover:border-primary hover:bg-accent"
+          className="group relative overflow-hidden rounded-xl border border-amber-900/30 bg-gradient-to-br from-[#2A1F1A] to-[#1A1410] p-6 text-center transition-all hover:scale-105 hover:border-amber-500/50 shadow-lg hover:shadow-amber-900/20"
         >
-          <div className="flex flex-col items-center space-y-3">
-            <div className="rounded-full bg-primary/10 p-3 transition-colors group-hover:bg-primary/20">
-              <Edit3 className="h-6 w-6 text-primary" />
+          <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-amber-500/20 to-yellow-400/10 rounded-full blur-2xl" />
+          <div className="relative flex flex-col items-center space-y-3">
+            <div className="rounded-full bg-amber-900/30 p-3 transition-all group-hover:bg-amber-500/20 border border-amber-500/30">
+              <Edit3 className="h-6 w-6 text-amber-400" />
             </div>
             <div>
-              <h3 className="text-base font-semibold">Enter Manually</h3>
-              <p className="mt-1 text-xs text-muted-foreground">
+              <h3 className="text-base font-semibold text-gray-100">Enter Manually</h3>
+              <p className="mt-1 text-xs text-gray-400">
                 Type in details yourself
               </p>
             </div>
-            <div className="mt-2 inline-flex items-center text-xs font-medium text-primary">
+            <div className="mt-2 inline-flex items-center text-xs font-medium text-amber-400">
               Full Control
               <span className="ml-1">→</span>
             </div>
@@ -166,8 +166,8 @@ export function AddBottleChoice({ userCurrency }: AddBottleChoiceProps) {
         </button>
       </div>
 
-      <div className="mt-8 rounded-lg bg-muted/50 p-4 text-sm text-muted-foreground">
-        <strong>Tip:</strong> Use batch upload if you have multiple bottles to add. Each label is processed
+      <div className="rounded-xl border border-amber-900/20 bg-amber-900/10 p-4 text-sm text-gray-300">
+        <strong className="text-amber-400">Tip:</strong> Use batch upload if you have multiple bottles to add. Each label is processed
         separately by AI, and you can review them one by one before saving.
       </div>
     </div>

@@ -81,7 +81,7 @@ function buildUserPrompt(input: WineEnrichmentInput): string {
  * Wine enrichment agent configuration
  */
 const baseConfig = createAgentConfig('wine-enrichment', '2.0.0', {
-  model: getModel('WINE_ENRICHMENT_MODEL', 'gpt-5-mini'),
+  model: getModel('WINE_ENRICHMENT_MODEL', 'gpt-4.1-mini'),
   temperature: 0.2,
   maxTokens: 800,
   timeoutMs: 20000,

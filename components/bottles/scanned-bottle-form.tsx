@@ -34,6 +34,7 @@ interface ScannedBottleFormProps {
     description?: string;
     tastingNotes?: string;
     aiGeneratedSummary?: string;
+    enrichmentSucceeded?: boolean; // Whether enrichment completed successfully
   };
   onBack: () => void;
   onSuccess?: () => void;
@@ -195,19 +196,34 @@ export function ScannedBottleForm({
           </>
         ) : (
           <>
-            {/* Show banner and full form when creating new wine */}
-            <div className="rounded-md bg-blue-500/10 border border-blue-500/20 p-4">
-              <div className="flex items-start">
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-blue-700 dark:text-blue-400">
-                    ✨ New wine created
-                  </p>
-                  <p className="text-xs text-blue-600 dark:text-blue-500 mt-1">
-                    This wine has been added to the database with AI-generated details.
-                  </p>
+            {/* Show banner when creating new wine */}
+            {extractedData.enrichmentSucceeded === true ? (
+              <div className="rounded-md bg-blue-500/10 border border-blue-500/20 p-4">
+                <div className="flex items-start">
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-blue-700 dark:text-blue-400">
+                      ✨ New wine added to catalog
+                    </p>
+                    <p className="text-xs text-blue-600 dark:text-blue-500 mt-1">
+                      This wine was added to our database with AI-generated sommelier notes. Now add your bottle details below.
+                    </p>
+                  </div>
                 </div>
               </div>
-            </div>
+            ) : extractedData.enrichmentSucceeded === false ? (
+              <div className="rounded-md bg-amber-500/10 border border-amber-500/20 p-4">
+                <div className="flex items-start">
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-amber-700 dark:text-amber-400">
+                      ⚠️ New wine added (basic info only)
+                    </p>
+                    <p className="text-xs text-amber-600 dark:text-amber-500 mt-1">
+                      This wine was added to our database with basic label information. AI enrichment temporarily unavailable. You can still add it to your cellar.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ) : null}
 
             <WatchListToggle description={WATCHLIST_DESCRIPTION} />
 

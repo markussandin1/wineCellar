@@ -22,6 +22,7 @@ interface ExtractedData {
   imageUrl?: string | null; // User's scanned label image URL (for their bottle)
   wineImageUrl?: string | null; // Wine's official label image from database
   enrichmentData?: any; // Wine enrichment data if available
+  enrichmentSucceeded?: boolean; // Whether enrichment completed successfully
 }
 
 interface LabelScannerProps {
@@ -119,20 +120,23 @@ export function LabelScanner({ initialPlacement, userCurrency }: LabelScannerPro
 
         if (!createResponse.ok) {
           const errorData = await createResponse.json();
-          // If wine already exists (race condition), just continue
-          if (createResponse.status === 409) {
-            console.log('Wine was created by another request, continuing...');
+          // If wine already exists (race condition), use existing wine ID
+          if (createResponse.status === 409 && errorData.wineId) {
+            console.log('Wine already exists in database, using existing ID:', errorData.wineId);
+            scanData.existingWineId = errorData.wineId;
+            // Note: enrichmentSucceeded is undefined here, which signals "existing wine found"
           } else {
             throw new Error(errorData.error || 'Failed to create wine');
           }
-        }
+        } else {
+          const createData = await createResponse.json();
 
-        const createData = await createResponse.json();
-
-        // Update scanData with newly created wine ID and enrichment
-        if (createData.success && createData.wine) {
-          scanData.existingWineId = createData.wine.id;
-          scanData.enrichmentData = createData.wine.enrichmentData;
+          // Update scanData with newly created wine ID and enrichment
+          if (createData.success && createData.wine) {
+            scanData.existingWineId = createData.wine.id;
+            scanData.enrichmentData = createData.wine.enrichmentData;
+            scanData.enrichmentSucceeded = createData.enrichmentSucceeded ?? false;
+          }
         }
       }
 

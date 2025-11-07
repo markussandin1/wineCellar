@@ -134,6 +134,7 @@ export async function POST(request: NextRequest) {
         enrichmentData: newWine.enrichment_data,
         primaryLabelImageUrl: newWine.primary_label_image_url,
       },
+      enrichmentSucceeded: enrichmentData !== null,
     });
   } catch (error: any) {
     console.error('Wine creation error:', error);
