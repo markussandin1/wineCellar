@@ -4,6 +4,7 @@ import { Wine, Plus, TrendingUp, BarChart3 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { getDashboardStats } from '@/app/actions/dashboard';
 import { PageHeader, StatCard } from '@/lib/design-system';
+import { FoodPairingWidget } from '@/components/food-pairing/FoodPairingWidget';
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -64,6 +65,11 @@ export default async function DashboardPage() {
             subtitle="Different types"
             icon={<BarChart3 className="h-5 w-5" />}
           />
+        </div>
+
+        {/* Food Pairing Widget - Full Width */}
+        <div className="mb-12">
+          <FoodPairingWidget />
         </div>
 
         {/* Insights */}
