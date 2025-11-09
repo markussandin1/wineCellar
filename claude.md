@@ -7,6 +7,24 @@ Build a wine cellar management web application (PWA) that uses AI to make wine t
 
 ## Recent Updates (2025-11-10)
 
+### Wine Creation Bug Fixes
+Fixed critical bugs in wine creation that caused missing metadata:
+
+**Problem:** Wines created without `full_name` and `ai_generated_summary` fields, resulting in "Unknown Wine" display and missing descriptions.
+
+**Root Cause:** `/app/api/wines/create/route.ts` did not populate:
+- `full_name` (combination of name + producer + vintage)
+- `ai_generated_summary` (extracted from enrichment data)
+
+**Solution:**
+- Generate `full_name` from name, producer, and vintage during wine creation
+- Extract `summary` from enrichment data and save as `ai_generated_summary`
+- Both fields now populated automatically when wines are created
+
+**Files Modified:** `/app/api/wines/create/route.ts:92-123`
+
+This ensures all new wines will have proper display names and AI-generated descriptions.
+
 ### Label Scanning UX Improvements
 Enhanced the wine scanning workflow with better user verification and context:
 

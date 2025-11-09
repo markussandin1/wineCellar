@@ -89,11 +89,25 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Generate full_name
+    const fullNameParts = [name];
+    if (producerName && producerName !== name) {
+      fullNameParts.push(producerName);
+    }
+    if (vintage) {
+      fullNameParts.push(String(vintage));
+    }
+    const fullName = fullNameParts.join(' ');
+
+    // Extract ai_generated_summary from enrichment data
+    const aiGeneratedSummary = enrichmentData?.summary || null;
+
     // Create wine in database
     const { data: newWine, error: insertError } = await supabase
       .from('wines')
       .insert({
         name,
+        full_name: fullName,
         producer_name: producerName,
         wine_type: wineType,
         vintage,
@@ -105,6 +119,7 @@ export async function POST(request: NextRequest) {
         enrichment_data: enrichmentData,
         enrichment_generated_at: enrichmentGeneratedAt,
         enrichment_version: enrichmentVersion,
+        ai_generated_summary: aiGeneratedSummary,
         data_source: 'label_scan',
         verified: false,
       })
