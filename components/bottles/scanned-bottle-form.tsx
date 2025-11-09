@@ -29,11 +29,13 @@ interface ScannedBottleFormProps {
     primaryGrape?: string;
     confidence: number;
     existingWineId?: string;
+    wasCreatedNow?: boolean; // TRUE if wine was just created, FALSE if it already existed
     imageUrl?: string | null; // User's scanned image (for their bottle)
     wineImageUrl?: string | null; // Wine's official image from database
-    description?: string;
-    tastingNotes?: string;
-    aiGeneratedSummary?: string;
+    enrichmentData?: any; // Structured enrichment data from wineEnrichmentAgent
+    description?: string; // Legacy field
+    tastingNotes?: string; // Legacy field
+    aiGeneratedSummary?: string; // Legacy field
     enrichmentSucceeded?: boolean; // Whether enrichment completed successfully
   };
   onBack: () => void;
@@ -55,6 +57,9 @@ export function ScannedBottleForm({
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [wineRejected, setWineRejected] = useState(false);
+  const [creatingNewWine, setCreatingNewWine] = useState(false);
+  const [wineContext, setWineContext] = useState('');
 
   const initialWatchList = initialPlacement === 'watchlist';
 
@@ -160,43 +165,157 @@ export function ScannedBottleForm({
 
   const isWatchList = watch('isWatchList');
 
+  // Handler for "This is not the correct wine" rejection
+  const handleRejectWine = async () => {
+    if (!wineContext.trim()) {
+      setError('Vänligen beskriv vinet för att hjälpa AI:n att skapa en korrekt profil.');
+      return;
+    }
+
+    setCreatingNewWine(true);
+    setError(null);
+
+    try {
+      // Call API to create new wine with enrichment using user's context
+      const response = await fetch('/api/wines/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: extractedData.wineName,
+          producerName: extractedData.producerName,
+          wineType: extractedData.wineType,
+          vintage: extractedData.vintage,
+          country: extractedData.country,
+          region: extractedData.region,
+          subRegion: extractedData.subRegion,
+          primaryGrape: extractedData.primaryGrape,
+          primaryLabelImageUrl: extractedData.imageUrl,
+          runEnrichment: true,
+          tastingProfileHints: wineContext,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to create wine');
+      }
+
+      // Update form with new wine ID
+      setValue('existingWineId', result.wine.id);
+
+      // Update extractedData with new wine info
+      Object.assign(extractedData, {
+        existingWineId: result.wine.id,
+        wasCreatedNow: true,
+        enrichmentSucceeded: result.enrichmentSucceeded,
+        enrichmentData: result.wine.enrichmentData,
+        wineImageUrl: result.wine.primaryLabelImageUrl,
+      });
+
+      // Clear rejection state
+      setWineRejected(false);
+      setCreatingNewWine(false);
+      setWineContext('');
+    } catch (createError: any) {
+      setError(createError.message || 'Failed to create new wine');
+      setCreatingNewWine(false);
+    }
+  };
+
   return (
     <FormProvider {...form}>
-      <form onSubmit={onSubmit} className="space-y-6 rounded-lg border bg-card p-6">
+      <form onSubmit={onSubmit} className="space-y-4 sm:space-y-6 rounded-lg border bg-card p-4 sm:p-6">
         {error && (
           <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{error}</div>
         )}
 
-        {extractedData.existingWineId ? (
+        {/* Low confidence warning */}
+        {extractedData.confidence < 0.7 && !extractedData.existingWineId && (
+          <div className="rounded-md bg-amber-500/10 border border-amber-500/20 p-3">
+            <p className="text-xs text-amber-600 dark:text-amber-500">
+              ⚠️ Low confidence scan ({Math.round(extractedData.confidence * 100)}%).
+              Please verify the wine details below are correct before saving.
+            </p>
+          </div>
+        )}
+
+        {extractedData.existingWineId && !extractedData.wasCreatedNow ? (
           <>
-            {/* Show wine card when wine exists in database */}
-            <WineCard
-              wine={{
-                name: extractedData.wineName,
-                producerName: extractedData.producerName,
-                vintage: extractedData.vintage,
-                wineType: extractedData.wineType,
-                country: extractedData.country,
-                region: extractedData.region,
-                imageUrl: extractedData.wineImageUrl || extractedData.imageUrl, // Prefer wine's official image
-              }}
-            />
+            {/* Wine ALREADY EXISTED in database */}
+            {!wineRejected ? (
+              <>
+                <WineCard
+                  wine={{
+                    name: extractedData.wineName,
+                    producerName: extractedData.producerName,
+                    vintage: extractedData.vintage,
+                    wineType: extractedData.wineType,
+                    country: extractedData.country,
+                    region: extractedData.region,
+                    subRegion: extractedData.subRegion,
+                    primaryGrape: extractedData.primaryGrape,
+                    imageUrl: extractedData.wineImageUrl || extractedData.imageUrl, // Prefer wine's official image
+                  }}
+                  onReject={() => setWineRejected(true)}
+                />
 
-            <WatchListToggle description={WATCHLIST_DESCRIPTION} />
+                <WatchListToggle description={WATCHLIST_DESCRIPTION} />
+              </>
+            ) : (
+              <>
+                {/* User rejected the wine match - show form to create new wine */}
+                <div className="rounded-md bg-amber-500/10 border border-amber-500/20 p-4">
+                  <p className="text-sm font-medium text-amber-700 dark:text-amber-400 mb-2">
+                    ⚠️ Detta är inte rätt vin
+                  </p>
+                  <p className="text-xs text-amber-600 dark:text-amber-500 mb-4">
+                    Beskriv vad du vet om vinet för att hjälpa AI:n att skapa en korrekt profil.
+                  </p>
 
-            {/* Separator between Wine and Bottle information - only show when not watch list */}
-            {!isWatchList && (
-              <div className="border-t pt-6">
-                <h2 className="text-lg font-semibold mb-4">Your Bottle Details</h2>
-                <p className="text-sm text-muted-foreground mb-6">
+                  <textarea
+                    value={wineContext}
+                    onChange={(e) => setWineContext(e.target.value)}
+                    placeholder="T.ex. 'Ett mörkt, kraftfullt rött vin från Österrike med bärtoner och kryddighet. Köpt på systembolaget för ca 150 kr.'"
+                    className="w-full min-h-[100px] rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    disabled={creatingNewWine}
+                  />
+
+                  <div className="flex gap-2 mt-3">
+                    <button
+                      type="button"
+                      onClick={() => setWineRejected(false)}
+                      disabled={creatingNewWine}
+                      className="rounded-md border bg-background px-3 py-1.5 text-xs font-medium hover:bg-accent disabled:opacity-50"
+                    >
+                      Avbryt
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleRejectWine}
+                      disabled={creatingNewWine || !wineContext.trim()}
+                      className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+                    >
+                      {creatingNewWine ? 'Skapar nytt vin...' : 'Skapa nytt vin'}
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Separator between Wine and Bottle information - only show when not watch list and not rejected */}
+            {!isWatchList && !wineRejected && (
+              <div className="border-t pt-4 sm:pt-6">
+                <h2 className="text-base sm:text-lg font-semibold mb-2 sm:mb-4">Your Bottle Details</h2>
+                <p className="text-xs sm:text-sm text-muted-foreground mb-4 sm:mb-6">
                   Fill in information specific to your bottle (price, location, notes, etc.)
                 </p>
               </div>
             )}
           </>
-        ) : (
+        ) : extractedData.existingWineId && extractedData.wasCreatedNow ? (
           <>
-            {/* Show banner when creating new wine */}
+            {/* Wine was JUST CREATED - show banner based on enrichment status */}
             {extractedData.enrichmentSucceeded === true ? (
               <div className="rounded-md bg-blue-500/10 border border-blue-500/20 p-4">
                 <div className="flex items-start">
@@ -225,165 +344,82 @@ export function ScannedBottleForm({
               </div>
             ) : null}
 
+            {/* Show wine card for newly created wine */}
+            <WineCard
+              wine={{
+                name: extractedData.wineName,
+                producerName: extractedData.producerName,
+                vintage: extractedData.vintage,
+                wineType: extractedData.wineType,
+                country: extractedData.country,
+                region: extractedData.region,
+                subRegion: extractedData.subRegion,
+                primaryGrape: extractedData.primaryGrape,
+                imageUrl: extractedData.imageUrl, // User's scanned image
+              }}
+            />
+
             <WatchListToggle description={WATCHLIST_DESCRIPTION} />
-
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold">Wine Information</h2>
-                <span className="text-xs text-muted-foreground">
-                  Confidence: {Math.round(extractedData.confidence * 100)}%
-                </span>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label htmlFor="wineName" className="block text-sm font-medium mb-2">
-                    Wine Name *
-                  </label>
-                  <input
-                    id="wineName"
-                    type="text"
-                    className="w-full rounded-md border bg-background px-3 py-2"
-                    {...register('wineName')}
-                  />
-                  <FieldError name="wineName" />
-                </div>
-
-                <div>
-                  <label htmlFor="vintage" className="block text-sm font-medium mb-2">
-                    Vintage
-                  </label>
-                  <input
-                    id="vintage"
-                    type="number"
-                    min="1900"
-                    max={new Date().getFullYear() + 5}
-                    className="w-full rounded-md border bg-background px-3 py-2"
-                    {...register('vintage')}
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label htmlFor="producerName" className="block text-sm font-medium mb-2">
-                    Producer *
-                  </label>
-                  <input
-                    id="producerName"
-                    type="text"
-                    className="w-full rounded-md border bg-background px-3 py-2"
-                    {...register('producerName')}
-                  />
-                  <FieldError name="producerName" />
-                </div>
-
-                <div>
-                  <label htmlFor="wineType" className="block text-sm font-medium mb-2">
-                    Wine Type *
-                  </label>
-                  <select
-                    id="wineType"
-                    className="w-full rounded-md border bg-background px-3 py-2"
-                    {...register('wineType')}
-                  >
-                    <option value="">Select type...</option>
-                    {WINE_TYPES.map((type) => (
-                      <option key={type.value} value={type.value}>
-                        {type.label}
-                      </option>
-                    ))}
-                  </select>
-                  <FieldError name="wineType" />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label htmlFor="country" className="block text-sm font-medium mb-2">
-                    Country *
-                  </label>
-                  <input
-                    id="country"
-                    type="text"
-                    className="w-full rounded-md border bg-background px-3 py-2"
-                    {...register('country')}
-                  />
-                  <FieldError name="country" />
-                </div>
-
-                <div>
-                  <label htmlFor="region" className="block text-sm font-medium mb-2">
-                    Region *
-                  </label>
-                  <input
-                    id="region"
-                    type="text"
-                    className="w-full rounded-md border bg-background px-3 py-2"
-                    {...register('region')}
-                  />
-                  <FieldError name="region" />
-                </div>
-
-                <div>
-                  <label htmlFor="subRegion" className="block text-sm font-medium mb-2">
-                    Sub-Region
-                  </label>
-                  <input
-                    id="subRegion"
-                    type="text"
-                    className="w-full rounded-md border bg-background px-3 py-2"
-                    {...register('subRegion')}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label htmlFor="primaryGrape" className="block text-sm font-medium mb-2">
-                  Primary Grape
-                </label>
-                <input
-                  id="primaryGrape"
-                  type="text"
-                  className="w-full rounded-md border bg-background px-3 py-2"
-                  {...register('primaryGrape')}
-                />
-              </div>
-            </div>
 
             {/* Separator between Wine and Bottle information - only show when not watch list */}
             {!isWatchList && (
-              <div className="border-t pt-6">
-                <h2 className="text-lg font-semibold mb-4">Your Bottle Details</h2>
-                <p className="text-sm text-muted-foreground mb-6">
+              <div className="border-t pt-4 sm:pt-6">
+                <h2 className="text-base sm:text-lg font-semibold mb-2 sm:mb-4">Your Bottle Details</h2>
+                <p className="text-xs sm:text-sm text-muted-foreground mb-4 sm:mb-6">
                   Fill in information specific to your bottle (price, location, notes, etc.)
                 </p>
               </div>
             )}
           </>
+        ) : (
+          <>
+            {/* FALLBACK: No wine ID (should not happen with new flow) */}
+            <div className="rounded-md bg-red-500/10 border border-red-500/20 p-4 text-center">
+              <div className="flex flex-col items-center">
+                <p className="text-sm font-medium text-red-700 dark:text-red-400 mb-2">
+                  ⚠️ Error: Wine data missing
+                </p>
+                <p className="text-xs text-red-600 dark:text-red-500 mb-4">
+                  Something went wrong during the scan. The wine was not properly created or matched.
+                </p>
+                <button
+                  type="button"
+                  onClick={onBack}
+                  className="rounded-md border bg-background px-4 py-2 text-sm font-medium hover:bg-accent"
+                >
+                  Try Again
+                </button>
+              </div>
+            </div>
+          </>
         )}
 
-        <PurchaseDetailsFields />
+        {/* Only show bottle details fields when wine is not rejected */}
+        {!wineRejected && (
+          <>
+            <PurchaseDetailsFields />
 
-        <StorageNotesFields />
+            <StorageNotesFields />
 
-        <div className="flex gap-3 justify-end pt-4 border-t">
-          <button
-            type="button"
-            onClick={onBack}
-            className="rounded-md border bg-background px-4 py-2 text-sm font-medium hover:bg-accent"
-            disabled={isSubmitting}
-          >
-            Back
-          </button>
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
-          >
-            {isSubmitting ? 'Adding...' : isWatchList ? 'Save to Watch List' : 'Add to Cellar'}
-          </button>
-        </div>
+            <div className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-3 sm:justify-end pt-4 border-t">
+              <button
+                type="button"
+                onClick={onBack}
+                className="rounded-md border bg-background px-4 py-2.5 text-sm font-medium hover:bg-accent"
+                disabled={isSubmitting}
+              >
+                Back
+              </button>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+              >
+                {isSubmitting ? 'Adding...' : isWatchList ? 'Save to Watch List' : 'Add to Cellar'}
+              </button>
+            </div>
+          </>
+        )}
       </form>
     </FormProvider>
   );

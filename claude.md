@@ -1,6 +1,47 @@
-Wine Cellar MVP - Development Instructions for Claude Code
+Wine Cellar - Development Instructions for Claude Code
 Project Overview
-Build a wine cellar management web application (PWA) that uses AI to make wine tracking effortless. The app solves three problems:
+Build a wine cellar management web application (PWA) that uses AI to make wine tracking effortless.
+
+- AI can never be mention in the app, ai is just a tool not a feature.
+- Always update the claude.md file before each commit
+
+## Recent Updates (2025-11-10)
+
+### Label Scanning UX Improvements
+Enhanced the wine scanning workflow with better user verification and context:
+
+1. **WineCard Enhancement** (`/components/bottles/wine-card.tsx`)
+   - Added sub-region and primary grape variety display
+   - Shows more comprehensive wine details for better match verification
+   - Integrated into location display (region, sub-region, country)
+
+2. **Wine Rejection Flow** (`/components/bottles/scanned-bottle-form.tsx`)
+   - Added "⚠️ This is not the correct wine" button to WineCard
+   - When clicked, shows form to create new wine with user context
+   - Required context field: "Vad vet du om vinet?" (What do you know about the wine?)
+   - User can describe wine characteristics, purchase details, tasting notes
+   - Context is passed to AI enrichment as `tastingProfileHints`
+
+3. **API Enhancement** (`/app/api/wines/create/route.ts`)
+   - Now accepts `tastingProfileHints` parameter
+   - Passes user context to wine enrichment agent
+   - Helps AI generate more accurate sommelier notes based on user knowledge
+
+**User Flow:**
+- User scans label → Wine matches existing wine in DB
+- WineCard shows detailed info (name, producer, vintage, region, sub-region, grape)
+- If wrong match: User clicks "This is not the correct wine"
+- Form appears with textarea for wine description
+- User provides context (e.g., taste profile, origin, purchase location)
+- New wine created with AI enrichment using user's context
+- Form updates to show newly created wine
+- User adds bottle details
+
+This addresses the issue where AI was matching incorrect wines and helps prevent duplicate creation with better user verification.
+
+
+
+The app solves three problems:
 
 Memory: Track wine details, prices, and characteristics without manual effort
 Discovery: Understand what you own and get smart recommendations

@@ -24,6 +24,7 @@ export async function POST(request: NextRequest) {
       primaryGrape,
       primaryLabelImageUrl,
       runEnrichment = true,
+      tastingProfileHints,
     } = body;
 
     // Validate required fields
@@ -67,6 +68,7 @@ export async function POST(request: NextRequest) {
         region,
         subRegion,
         primaryGrape,
+        tastingProfileHints: tastingProfileHints || null,
       };
 
       try {
