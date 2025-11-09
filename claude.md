@@ -7,6 +7,17 @@ Build a wine cellar management web application (PWA) that uses AI to make wine t
 
 ## Recent Updates (2025-11-10)
 
+### Wine Enrichment Validation Bug Fix
+Fixed snake_case/camelCase mismatch in enrichment agent validation.
+
+**Problem:** Wine enrichment agent validation failed with "Missing or invalid signature_traits" error.
+
+**Root Cause:** Mismatch between prompt (camelCase: `tastingNotes`, `foodPairings`, `signatureTraits`) and validation code (snake_case: `tasting_notes`, `food_pairings`, `signature_traits`).
+
+**Solution:** Updated validation in `wine-enrichment.agent.ts` to use camelCase consistently with prompt format.
+
+**Files Modified:** `/lib/ai/agents/wine-enrichment/wine-enrichment.agent.ts:67-105`
+
 ### Wine Creation Bug Fixes
 Fixed critical bugs in wine creation that caused missing metadata:
 

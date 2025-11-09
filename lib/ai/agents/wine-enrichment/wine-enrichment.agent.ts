@@ -64,30 +64,30 @@ export class WineEnrichmentAgent implements Agent<WineEnrichmentInput, WineEnric
       if (!data.serving || typeof data.serving !== 'string') {
         throw new Error('Missing or invalid serving');
       }
-      if (!data.signature_traits || typeof data.signature_traits !== 'string') {
-        throw new Error('Missing or invalid signature_traits');
+      if (!data.signatureTraits || typeof data.signatureTraits !== 'string') {
+        throw new Error('Missing or invalid signatureTraits');
       }
 
       // Validate tasting notes
-      if (!data.tasting_notes || typeof data.tasting_notes !== 'object') {
-        throw new Error('Missing or invalid tasting_notes');
+      if (!data.tastingNotes || typeof data.tastingNotes !== 'object') {
+        throw new Error('Missing or invalid tastingNotes');
       }
-      if (!data.tasting_notes.nose || typeof data.tasting_notes.nose !== 'string') {
-        throw new Error('Missing or invalid tasting_notes.nose');
+      if (!data.tastingNotes.nose || typeof data.tastingNotes.nose !== 'string') {
+        throw new Error('Missing or invalid tastingNotes.nose');
       }
-      if (!data.tasting_notes.palate || typeof data.tasting_notes.palate !== 'string') {
-        throw new Error('Missing or invalid tasting_notes.palate');
+      if (!data.tastingNotes.palate || typeof data.tastingNotes.palate !== 'string') {
+        throw new Error('Missing or invalid tastingNotes.palate');
       }
-      if (!data.tasting_notes.finish || typeof data.tasting_notes.finish !== 'string') {
-        throw new Error('Missing or invalid tasting_notes.finish');
+      if (!data.tastingNotes.finish || typeof data.tastingNotes.finish !== 'string') {
+        throw new Error('Missing or invalid tastingNotes.finish');
       }
 
       // Validate food pairings
-      if (!Array.isArray(data.food_pairings) || data.food_pairings.length === 0) {
-        throw new Error('Missing or invalid food_pairings (must be non-empty array)');
+      if (!Array.isArray(data.foodPairings) || data.foodPairings.length === 0) {
+        throw new Error('Missing or invalid foodPairings (must be non-empty array)');
       }
-      if (!data.food_pairings.every((p: unknown) => typeof p === 'string')) {
-        throw new Error('All food_pairings must be strings');
+      if (!data.foodPairings.every((p: unknown) => typeof p === 'string')) {
+        throw new Error('All foodPairings must be strings');
       }
 
       return {
@@ -96,13 +96,13 @@ export class WineEnrichmentAgent implements Agent<WineEnrichmentInput, WineEnric
         terroir: data.terroir.trim(),
         winemaking: data.winemaking.trim(),
         tastingNotes: {
-          nose: data.tasting_notes.nose.trim(),
-          palate: data.tasting_notes.palate.trim(),
-          finish: data.tasting_notes.finish.trim(),
+          nose: data.tastingNotes.nose.trim(),
+          palate: data.tastingNotes.palate.trim(),
+          finish: data.tastingNotes.finish.trim(),
         },
         serving: data.serving.trim(),
-        foodPairings: data.food_pairings.map((p: string) => p.trim()),
-        signatureTraits: data.signature_traits.trim(),
+        foodPairings: data.foodPairings.map((p: string) => p.trim()),
+        signatureTraits: data.signatureTraits.trim(),
       };
     } catch (error) {
       if (error instanceof SyntaxError) {
