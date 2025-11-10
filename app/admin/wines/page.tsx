@@ -23,7 +23,7 @@ interface Wine {
   body: string | null;
   status: 'draft' | 'active';
   verified: boolean;
-  label_image_url: string | null;
+  primary_label_image_url: string | null;
   userCount: number;
   bottleCount: number;
   created_at: string;

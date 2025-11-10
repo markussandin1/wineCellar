@@ -33,7 +33,7 @@ interface Wine {
   body: string | null;
   status: 'draft' | 'active';
   verified: boolean;
-  label_image_url: string | null;
+  primary_label_image_url: string | null;
   userCount: number;
   bottleCount: number;
   created_at: string;
@@ -80,10 +80,10 @@ export function WineDataTable({ wines, onRefresh }: WineDataTableProps) {
                 wines.map((wine) => (
                   <TableRow key={wine.id}>
                     <TableCell>
-                      {wine.label_image_url ? (
+                      {wine.primary_label_image_url ? (
                         <div className="relative w-10 h-12 rounded overflow-hidden bg-neutral-100">
                           <Image
-                            src={wine.label_image_url}
+                            src={wine.primary_label_image_url}
                             alt={wine.full_name}
                             fill
                             className="object-cover"
