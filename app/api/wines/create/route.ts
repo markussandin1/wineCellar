@@ -23,8 +23,9 @@ export async function POST(request: NextRequest) {
       subRegion,
       primaryGrape,
       primaryLabelImageUrl,
-      runEnrichment = true,
-      tastingProfileHints,
+      enrichmentData, // Pre-generated enrichment data from user (edited in preview)
+      runEnrichment = false, // DEPRECATED: enrichment should be provided, not generated here
+      tastingProfileHints, // DEPRECATED: only used if runEnrichment=true
     } = body;
 
     // Validate required fields
@@ -33,6 +34,25 @@ export async function POST(request: NextRequest) {
         { error: 'Missing required fields: name, producerName' },
         { status: 400 }
       );
+    }
+
+    // Use enrichment agent's inferred country/region if available
+    // The enrichment agent uses wine knowledge to determine country/region with high confidence
+    let finalCountry = country;
+    let finalRegion = region;
+
+    if (enrichmentData) {
+      // Use inferred country from enrichment agent if provided country is missing
+      if (!finalCountry && enrichmentData.inferredCountry) {
+        finalCountry = enrichmentData.inferredCountry;
+        console.log(`Using enrichment agent's inferred country: "${finalCountry}"`);
+      }
+
+      // Use inferred region from enrichment agent if provided region is missing
+      if (!finalRegion && enrichmentData.inferredRegion) {
+        finalRegion = enrichmentData.inferredRegion;
+        console.log(`Using enrichment agent's inferred region: "${finalRegion}"`);
+      }
     }
 
     // Check if wine already exists (prevent duplicates)
@@ -51,12 +71,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    let enrichmentData = null;
+    let finalEnrichmentData = enrichmentData || null;
     let enrichmentGeneratedAt = null;
     let enrichmentVersion = null;
 
-    // Run wine enrichment if requested
-    if (runEnrichment) {
+    // BACKWARD COMPATIBILITY: Run wine enrichment if requested (deprecated flow)
+    // New flow: enrichmentData should be provided from user preview/edit
+    if (runEnrichment && !enrichmentData) {
+      console.warn('[DEPRECATED] Running enrichment during wine creation. Use /api/scan-label/enrich instead.');
       console.log('Running wine enrichment for:', name);
 
       const enrichmentInput: WineEnrichmentInput = {
@@ -75,7 +97,7 @@ export async function POST(request: NextRequest) {
         const enrichmentResult = await wineEnrichmentAgent.execute(enrichmentInput);
 
         if (enrichmentResult.success && enrichmentResult.data) {
-          enrichmentData = enrichmentResult.data;
+          finalEnrichmentData = enrichmentResult.data;
           enrichmentGeneratedAt = new Date().toISOString();
           enrichmentVersion = '2.0.0'; // Wine Enrichment Agent V2
           console.log('Wine enrichment successful');
@@ -87,6 +109,11 @@ export async function POST(request: NextRequest) {
         console.error('Wine enrichment error:', enrichmentError);
         // Continue without enrichment
       }
+    } else if (enrichmentData) {
+      // User provided pre-generated enrichment (new flow)
+      console.log('Using user-edited enrichment data for:', name);
+      enrichmentGeneratedAt = new Date().toISOString();
+      enrichmentVersion = '2.0.0'; // Wine Enrichment Agent V2
     }
 
     // Generate full_name
@@ -100,7 +127,7 @@ export async function POST(request: NextRequest) {
     const fullName = fullNameParts.join(' ');
 
     // Extract ai_generated_summary from enrichment data
-    const aiGeneratedSummary = enrichmentData?.summary || null;
+    const aiGeneratedSummary = finalEnrichmentData?.summary || null;
 
     // Create wine in database
     const { data: newWine, error: insertError } = await supabase
@@ -111,17 +138,18 @@ export async function POST(request: NextRequest) {
         producer_name: producerName,
         wine_type: wineType,
         vintage,
-        country,
-        region,
+        country: finalCountry,
+        region: finalRegion,
         sub_region: subRegion || null,
         primary_grape: primaryGrape || null,
         primary_label_image_url: primaryLabelImageUrl || null,
-        enrichment_data: enrichmentData,
+        enrichment_data: finalEnrichmentData,
         enrichment_generated_at: enrichmentGeneratedAt,
         enrichment_version: enrichmentVersion,
         ai_generated_summary: aiGeneratedSummary,
         data_source: 'label_scan',
         verified: false,
+        status: 'active', // Wine is confirmed and saved
       })
       .select('*')
       .single();
@@ -151,7 +179,7 @@ export async function POST(request: NextRequest) {
         enrichmentData: newWine.enrichment_data,
         primaryLabelImageUrl: newWine.primary_label_image_url,
       },
-      enrichmentSucceeded: enrichmentData !== null,
+      enrichmentSucceeded: finalEnrichmentData !== null,
     });
   } catch (error: any) {
     console.error('Wine creation error:', error);

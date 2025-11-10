@@ -58,4 +58,8 @@ export interface WineEnrichmentOutput {
   foodPairings: string[];
   /** Signature traits that make the wine distinctive */
   signatureTraits: string;
+  /** Inferred country (if agent could determine with high confidence) */
+  inferredCountry?: string | null;
+  /** Inferred region (if agent could determine with high confidence) */
+  inferredRegion?: string | null;
 }

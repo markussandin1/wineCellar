@@ -54,27 +54,40 @@ function buildFactsSection(input: WineEnrichmentInput): string {
 function buildUserPrompt(input: WineEnrichmentInput): string {
   const facts = buildFactsSection(input);
 
-  return `Write an English wine profile based on the following facts:\n${facts}\n\n` +
+  // Check if we're missing critical origin info
+  const missingCountry = !input.country;
+  const hasRegion = !!input.region;
+
+  return `Write a wine profile based on the following facts:\n${facts}\n\n` +
     'Return a JSON object with the keys:\n' +
     '{\n' +
     '  "summary": "Two sentences introducing the wine\'s style and character",\n' +
     '  "overview": "Short description of the producer\'s approach and where this wine sits in the range",\n' +
     '  "terroir": "Origin, climate, and vineyard factors that shape the wine",\n' +
     '  "winemaking": "Vinification, maturation, and any signature techniques",\n' +
-    '  "tasting_notes": {\n' +
+    '  "tastingNotes": {\n' +
     '    "nose": "Aromatic profile with typical scents",\n' +
     '    "palate": "Flavour profile, texture, and balance",\n' +
     '    "finish": "Length, structure, and aftertaste"\n' +
     '  },\n' +
     '  "serving": "Serving guidance, temperature, decanting, and cellaring window if relevant",\n' +
-    '  "food_pairings": ["Three to four dishes or food styles with brief justification"],\n' +
-    '  "signature_traits": "What makes the wine distinctive or memorable"\n' +
+    '  "foodPairings": ["Three to four dishes or food styles with brief justification"],\n' +
+    '  "signatureTraits": "What makes the wine distinctive or memorable",\n' +
+    '  "inferredCountry": "The country of origin (ONLY if you can determine it with high confidence from producer name, region, or other facts)",\n' +
+    '  "inferredRegion": "The wine region (ONLY if you can determine it with high confidence from producer name or other facts)"\n' +
     '}\n\n' +
-    'Requirements:\n' +
-    '- Use only details that can be derived from the facts or widely recognised traits for the style/region.\n' +
-    '- If data is missing, rely on established characteristics without calling out gaps or uncertainty.\n' +
-    '- Write in complete sentences, third person, and avoid bullet lists except inside the food_pairings array.\n' +
-    '- Do not mention AI, guesses, or hedging language. Maintain a confident, expert tone.\n';
+    'CRITICAL REQUIREMENTS:\n' +
+    (missingCountry && hasRegion
+      ? `- IMPORTANT: Country is missing but region "${input.region}" is provided. Use your wine knowledge to determine the country for this region with high confidence. Add it to "inferredCountry".\n`
+      : '') +
+    (missingCountry && !hasRegion
+      ? '- IMPORTANT: Country and region are missing. Analyze the producer name, wine name, and grape variety to determine the likely country/region. Add confident inferences to "inferredCountry" and "inferredRegion".\n'
+      : '') +
+    '- Use established wine knowledge to infer geographic origin when facts strongly indicate it (e.g., "Central Coast" → USA, "Barossa" → Australia).\n' +
+    '- Base descriptions on the wine type, grape variety, and any provided origin information.\n' +
+    '- Write in complete sentences, third person. Maintain a confident, expert tone.\n' +
+    '- Do not mention AI, uncertainty, or gaps in data.\n' +
+    '- If you cannot determine country/region with high confidence, set inferredCountry and inferredRegion to null.\n';
 }
 
 /**

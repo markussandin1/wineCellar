@@ -103,6 +103,8 @@ export class WineEnrichmentAgent implements Agent<WineEnrichmentInput, WineEnric
         serving: data.serving.trim(),
         foodPairings: data.foodPairings.map((p: string) => p.trim()),
         signatureTraits: data.signatureTraits.trim(),
+        inferredCountry: data.inferredCountry?.trim() || null,
+        inferredRegion: data.inferredRegion?.trim() || null,
       };
     } catch (error) {
       if (error instanceof SyntaxError) {
