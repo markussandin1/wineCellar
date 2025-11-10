@@ -7,6 +7,135 @@ Build a wine cellar management web application (PWA) that uses AI to make wine t
 
 ## Recent Updates (2025-11-10)
 
+### Wine Edit Modal Refactoring - Single Form with Editable Enrichment
+Complete redesign of wine edit modal from tabbed interface to single scrollable form with all fields editable.
+
+**User Request:** "Varför har vi delat upp det i grundläggande info och enrichment? Beskrivning och enrichment går inte att editera."
+
+**Problem:**
+- Tab structure separated basic info from enrichment unnecessarily
+- Enrichment fields (descriptions, tasting notes, food pairings) were read-only
+- Users couldn't edit AI-generated text directly
+- Confusing UX with two separate views
+
+**Solution:** Unified single-form interface
+1. **Removed tabs** - Replaced "Grundläggande info" / "Beskrivning & Enrichment" tabs with single scrollable form
+2. **Made ALL enrichment editable** - Converted all read-only displays to editable textareas
+3. **Array input for food pairings** - Add/remove buttons for managing food pairing list
+4. **Integrated AI regeneration** - "Regenerera med AI" button in enrichment section
+5. **Fixed enrichment save bug** - WineEnrichmentModal was using wrong field names
+
+**Architecture Changes:**
+
+**Before (Tabbed Interface):**
+- Tab 1: Editable basic fields only
+- Tab 2: Read-only enrichment display
+- Separate sparkle button to regenerate enrichment
+- Bug: Enrichment modal saved to non-existent columns
+
+**After (Single Form):**
+```
+Form Sections (all in one scrollable view):
+├── Grundläggande information (name, producer, vintage, type, grape, alcohol)
+├── Plats (country, region, sub_region, appellation)
+├── Egenskaper (sweetness_level, body)
+├── Status (status, verified)
+├── Beskrivningar & Enrichment [Regenerera med AI button]
+│   ├── Sammanfattning (ai_generated_summary) - textarea
+│   ├── Översikt (overview) - textarea
+│   ├── Terroir (terroir) - textarea
+│   └── Vinframställning (winemaking) - textarea
+├── Provningsanteckningar
+│   ├── Doft (nose) - textarea
+│   ├── Smak (palate) - textarea
+│   └── Eftersmak (finish) - textarea
+├── Servering & Matpar
+│   ├── Servering (serving) - textarea
+│   ├── Matpar (foodPairings) - array inputs with add/remove
+│   └── Signatur egenskaper (signatureTraits) - textarea
+└── Metadata (created_at, updated_at) - read-only
+```
+
+**User Flow:**
+1. Click Edit (pencil icon) → Single form with all fields visible
+2. Directly edit ANY field (basic data OR enrichment text)
+3. Click "Regenerera med AI" → Opens enrichment modal overlay
+4. Generate → Preview → Save → Returns to wine list
+5. Open edit modal again to see refreshed enrichment values
+
+**Technical Implementation:**
+
+**formData state** now includes all enrichment fields:
+```typescript
+{
+  // Basic fields
+  name, producer_name, vintage, wine_type, etc.
+  // Enrichment fields (NEW - now editable)
+  ai_generated_summary,
+  enrichment_overview,
+  enrichment_terroir,
+  enrichment_winemaking,
+  enrichment_tasting_notes_nose,
+  enrichment_tasting_notes_palate,
+  enrichment_tasting_notes_finish,
+  enrichment_serving,
+  enrichment_food_pairings: string[], // array input
+  enrichment_signature_traits
+}
+```
+
+**handleSubmit** builds enrichment_data JSONB correctly:
+```typescript
+const enrichmentData = {
+  summary: formData.ai_generated_summary,
+  overview: formData.enrichment_overview,
+  terroir: formData.enrichment_terroir,
+  winemaking: formData.enrichment_winemaking,
+  tastingNotes: {
+    nose: formData.enrichment_tasting_notes_nose,
+    palate: formData.enrichment_tasting_notes_palate,
+    finish: formData.enrichment_tasting_notes_finish,
+  },
+  serving: formData.enrichment_serving,
+  foodPairings: formData.enrichment_food_pairings,
+  signatureTraits: formData.enrichment_signature_traits,
+};
+
+// Send to API
+updates.enrichment_data = enrichmentData;
+updates.ai_generated_summary = formData.ai_generated_summary;
+```
+
+**Bug Fixed in WineEnrichmentModal:**
+```typescript
+// ❌ BEFORE (wrong - individual non-existent columns):
+{
+  enrichment_overview: enrichment.overview,
+  enrichment_terroir: enrichment.terroir,
+  // ... etc (these columns don't exist)
+}
+
+// ✅ AFTER (correct - JSONB field):
+{
+  ai_generated_summary: enrichment.summary,
+  enrichment_data: enrichment, // Full JSONB object
+  enrichment_version: timestamp,
+  enrichment_generated_at: timestamp,
+}
+```
+
+**Files Modified:**
+- `/components/admin/wine-edit-modal.tsx` (complete rewrite - 660 lines)
+- `/components/admin/wine-enrichment-modal.tsx:71-84` (fix save bug)
+- `/components/admin/wine-table.tsx:186-191` (add regeneration callback)
+
+**Benefits:**
+- ✅ All fields accessible in one view (no tab switching)
+- ✅ Direct editing of enrichment text (no need to regenerate if you just want to tweak)
+- ✅ AI regeneration still available via button
+- ✅ Enrichment save now works correctly
+- ✅ Better UX for admin wine management
+
 ### Wine Edit Modal Type Error Fix
 Fixed runtime TypeError when viewing wine enrichment data in admin panel.
 
