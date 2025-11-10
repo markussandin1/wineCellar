@@ -183,6 +183,12 @@ export function WineDataTable({ wines, onRefresh }: WineDataTableProps) {
             setEditingWine(null);
             onRefresh();
           }}
+          onRegenerateEnrichment={() => {
+            // Save current wine and close edit modal, then open enrichment modal
+            const wineToEnrich = editingWine;
+            setEditingWine(null);
+            setEnrichingWine(wineToEnrich);
+          }}
         />
       )}
 
@@ -203,6 +209,7 @@ export function WineDataTable({ wines, onRefresh }: WineDataTableProps) {
           onClose={() => setEnrichingWine(null)}
           onSave={() => {
             setEnrichingWine(null);
+            // Refresh data to update edit modal if it's open
             onRefresh();
           }}
         />

@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
   SelectContent,
@@ -12,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Loader2, Image as ImageIcon } from 'lucide-react';
+import { Loader2, Sparkles, Plus, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
 
@@ -44,13 +45,17 @@ interface WineEditModalProps {
   wine: Wine;
   onClose: () => void;
   onSave: () => void;
+  onRegenerateEnrichment?: () => void;
 }
 
-export function WineEditModal({ wine, onClose, onSave }: WineEditModalProps) {
+export function WineEditModal({ wine, onClose, onSave, onRegenerateEnrichment }: WineEditModalProps) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<'edit' | 'enrichment'>('edit');
+
+  const enrichment = wine.enrichment_data || {};
+
   const [formData, setFormData] = useState({
+    // Basic fields
     name: wine.name || wine.full_name,
     producer_name: wine.producer_name,
     vintage: wine.vintage?.toString() || '',
@@ -65,13 +70,60 @@ export function WineEditModal({ wine, onClose, onSave }: WineEditModalProps) {
     body: wine.body || '',
     status: wine.status,
     verified: wine.verified,
+    // Enrichment fields
+    ai_generated_summary: wine.ai_generated_summary || '',
+    enrichment_overview: enrichment.overview || '',
+    enrichment_terroir: enrichment.terroir || '',
+    enrichment_winemaking: enrichment.winemaking || '',
+    enrichment_tasting_notes_nose: enrichment.tastingNotes?.nose || '',
+    enrichment_tasting_notes_palate: enrichment.tastingNotes?.palate || '',
+    enrichment_tasting_notes_finish: enrichment.tastingNotes?.finish || '',
+    enrichment_serving: enrichment.serving || '',
+    enrichment_food_pairings: Array.isArray(enrichment.foodPairings) ? enrichment.foodPairings : [],
+    enrichment_signature_traits: enrichment.signatureTraits || '',
   });
+
+  const addFoodPairing = () => {
+    setFormData({
+      ...formData,
+      enrichment_food_pairings: [...formData.enrichment_food_pairings, '']
+    });
+  };
+
+  const removeFoodPairing = (index: number) => {
+    setFormData({
+      ...formData,
+      enrichment_food_pairings: formData.enrichment_food_pairings.filter((_, i) => i !== index)
+    });
+  };
+
+  const updateFoodPairing = (index: number, value: string) => {
+    const updated = [...formData.enrichment_food_pairings];
+    updated[index] = value;
+    setFormData({ ...formData, enrichment_food_pairings: updated });
+  };
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
 
     try {
+      // Build enrichment_data JSONB object
+      const enrichmentData = {
+        summary: formData.ai_generated_summary,
+        overview: formData.enrichment_overview,
+        terroir: formData.enrichment_terroir,
+        winemaking: formData.enrichment_winemaking,
+        tastingNotes: {
+          nose: formData.enrichment_tasting_notes_nose,
+          palate: formData.enrichment_tasting_notes_palate,
+          finish: formData.enrichment_tasting_notes_finish,
+        },
+        serving: formData.enrichment_serving,
+        foodPairings: formData.enrichment_food_pairings.filter(p => p.trim() !== ''),
+        signatureTraits: formData.enrichment_signature_traits,
+      };
+
       const updates: any = {
         name: formData.name,
         producer_name: formData.producer_name,
@@ -89,6 +141,9 @@ export function WineEditModal({ wine, onClose, onSave }: WineEditModalProps) {
         body: formData.body || null,
         status: formData.status,
         verified: formData.verified,
+        // Enrichment fields
+        ai_generated_summary: formData.ai_generated_summary,
+        enrichment_data: enrichmentData,
       };
 
       // Update full_name if name, producer, or vintage changed
@@ -126,8 +181,6 @@ export function WineEditModal({ wine, onClose, onSave }: WineEditModalProps) {
     }
   }
 
-  const enrichment = wine.enrichment_data;
-
   return (
     <Dialog open onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -152,362 +205,416 @@ export function WineEditModal({ wine, onClose, onSave }: WineEditModalProps) {
           </DialogTitle>
         </DialogHeader>
 
-        {/* Tabs */}
-        <div className="flex gap-2 border-b border-neutral-200">
-          <button
-            onClick={() => setActiveTab('edit')}
-            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-              activeTab === 'edit'
-                ? 'border-neutral-900 text-neutral-900'
-                : 'border-transparent text-neutral-600 hover:text-neutral-900'
-            }`}
-          >
-            Grundläggande info
-          </button>
-          <button
-            onClick={() => setActiveTab('enrichment')}
-            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-              activeTab === 'enrichment'
-                ? 'border-neutral-900 text-neutral-900'
-                : 'border-transparent text-neutral-600 hover:text-neutral-900'
-            }`}
-          >
-            Beskrivning & Enrichment
-          </button>
-        </div>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Basic Info */}
+          <div className="space-y-4">
+            <h3 className="font-semibold text-lg border-b pb-2">Grundläggande information</h3>
 
-        {activeTab === 'edit' ? (
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Basic Info */}
-            <div className="space-y-4">
-              <h3 className="font-semibold">Grundläggande information</h3>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="name">Vinnamn</Label>
-                  <Input
-                    id="name"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    required
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="producer">Producent</Label>
-                  <Input
-                    id="producer"
-                    value={formData.producer_name}
-                    onChange={(e) =>
-                      setFormData({ ...formData, producer_name: e.target.value })
-                    }
-                    required
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="vintage">Årgång</Label>
-                  <Input
-                    id="vintage"
-                    type="number"
-                    value={formData.vintage}
-                    onChange={(e) => setFormData({ ...formData, vintage: e.target.value })}
-                    placeholder="NV"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="wineType">Vintyp</Label>
-                  <Select
-                    value={formData.wine_type}
-                    onValueChange={(value) =>
-                      setFormData({ ...formData, wine_type: value })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Red">Rött</SelectItem>
-                      <SelectItem value="White">Vitt</SelectItem>
-                      <SelectItem value="Rosé">Rosé</SelectItem>
-                      <SelectItem value="Sparkling">Mousserande</SelectItem>
-                      <SelectItem value="Dessert">Dessertvin</SelectItem>
-                      <SelectItem value="Fortified">Starkvin</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <Label htmlFor="grape">Primär druva</Label>
-                  <Input
-                    id="grape"
-                    value={formData.primary_grape}
-                    onChange={(e) =>
-                      setFormData({ ...formData, primary_grape: e.target.value })
-                    }
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="alcohol">Alkoholhalt (%)</Label>
-                  <Input
-                    id="alcohol"
-                    type="number"
-                    step="0.1"
-                    value={formData.alcohol_percentage}
-                    onChange={(e) =>
-                      setFormData({ ...formData, alcohol_percentage: e.target.value })
-                    }
-                    placeholder="13.5"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Location */}
-            <div className="space-y-4">
-              <h3 className="font-semibold">Plats</h3>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="country">Land</Label>
-                  <Input
-                    id="country"
-                    value={formData.country}
-                    onChange={(e) => setFormData({ ...formData, country: e.target.value })}
-                    required
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="region">Region</Label>
-                  <Input
-                    id="region"
-                    value={formData.region}
-                    onChange={(e) => setFormData({ ...formData, region: e.target.value })}
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="subRegion">Subregion</Label>
-                  <Input
-                    id="subRegion"
-                    value={formData.sub_region}
-                    onChange={(e) =>
-                      setFormData({ ...formData, sub_region: e.target.value })
-                    }
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="appellation">Appellation</Label>
-                  <Input
-                    id="appellation"
-                    value={formData.appellation}
-                    onChange={(e) =>
-                      setFormData({ ...formData, appellation: e.target.value })
-                    }
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Characteristics */}
-            <div className="space-y-4">
-              <h3 className="font-semibold">Egenskaper</h3>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="sweetness">Sötma</Label>
-                  <Select
-                    value={formData.sweetness_level}
-                    onValueChange={(value) =>
-                      setFormData({ ...formData, sweetness_level: value })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Välj" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="dry">Torr</SelectItem>
-                      <SelectItem value="off-dry">Halvtorr</SelectItem>
-                      <SelectItem value="medium">Medium</SelectItem>
-                      <SelectItem value="sweet">Söt</SelectItem>
-                      <SelectItem value="very_sweet">Mycket söt</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <Label htmlFor="body">Kropp</Label>
-                  <Select
-                    value={formData.body}
-                    onValueChange={(value) => setFormData({ ...formData, body: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Välj" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="light">Lätt</SelectItem>
-                      <SelectItem value="medium">Medium</SelectItem>
-                      <SelectItem value="full">Fyllig</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </div>
-
-            {/* Status */}
-            <div className="space-y-4">
-              <h3 className="font-semibold">Status</h3>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="status">Status</Label>
-                  <Select
-                    value={formData.status}
-                    onValueChange={(value: 'draft' | 'active') =>
-                      setFormData({ ...formData, status: value })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="active">Aktiv</SelectItem>
-                      <SelectItem value="draft">Utkast</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="flex items-end">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={formData.verified}
-                      onChange={(e) =>
-                        setFormData({ ...formData, verified: e.target.checked })
-                      }
-                      className="w-4 h-4 rounded border-neutral-300"
-                    />
-                    <span className="text-sm">Verifierat vin</span>
-                  </label>
-                </div>
-              </div>
-            </div>
-
-            {/* Actions */}
-            <div className="flex items-center justify-end gap-3 pt-4 border-t">
-              <Button type="button" variant="outline" onClick={onClose}>
-                Avbryt
-              </Button>
-              <Button type="submit" disabled={loading}>
-                {loading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Sparar...
-                  </>
-                ) : (
-                  'Spara ändringar'
-                )}
-              </Button>
-            </div>
-          </form>
-        ) : (
-          <div className="space-y-6 pb-4">
-            {/* Summary */}
-            {wine.ai_generated_summary ? (
+            <div className="grid grid-cols-2 gap-4">
               <div>
-                <h3 className="font-semibold mb-2">Sammanfattning</h3>
-                <p className="text-sm text-neutral-700">{wine.ai_generated_summary}</p>
+                <Label htmlFor="name">Vinnamn</Label>
+                <Input
+                  id="name"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  required
+                />
               </div>
-            ) : (
-              <div className="text-center py-8 text-neutral-500">
-                <p>Detta vin har ingen enrichment-beskrivning ännu.</p>
-                <p className="text-sm mt-2">
-                  Använd "Generera beskrivning" knappen för att skapa en.
-                </p>
+
+              <div>
+                <Label htmlFor="producer">Producent</Label>
+                <Input
+                  id="producer"
+                  value={formData.producer_name}
+                  onChange={(e) =>
+                    setFormData({ ...formData, producer_name: e.target.value })
+                  }
+                  required
+                />
               </div>
-            )}
 
-            {/* Enrichment Data */}
-            {enrichment && (
-              <>
-                {enrichment.overview && (
-                  <div>
-                    <h3 className="font-semibold mb-2">Översikt</h3>
-                    <p className="text-sm text-neutral-700">{enrichment.overview}</p>
-                  </div>
-                )}
+              <div>
+                <Label htmlFor="vintage">Årgång</Label>
+                <Input
+                  id="vintage"
+                  type="number"
+                  value={formData.vintage}
+                  onChange={(e) => setFormData({ ...formData, vintage: e.target.value })}
+                  placeholder="NV"
+                />
+              </div>
 
-                {enrichment.terroir && (
-                  <div>
-                    <h3 className="font-semibold mb-2">Terroir</h3>
-                    <p className="text-sm text-neutral-700">{enrichment.terroir}</p>
-                  </div>
-                )}
+              <div>
+                <Label htmlFor="wineType">Vintyp</Label>
+                <Select
+                  value={formData.wine_type}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, wine_type: value })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Red">Rött</SelectItem>
+                    <SelectItem value="White">Vitt</SelectItem>
+                    <SelectItem value="Rosé">Rosé</SelectItem>
+                    <SelectItem value="Sparkling">Mousserande</SelectItem>
+                    <SelectItem value="Dessert">Dessertvin</SelectItem>
+                    <SelectItem value="Fortified">Starkvin</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-                {enrichment.winemaking && (
-                  <div>
-                    <h3 className="font-semibold mb-2">Vinframställning</h3>
-                    <p className="text-sm text-neutral-700">{enrichment.winemaking}</p>
-                  </div>
-                )}
+              <div>
+                <Label htmlFor="grape">Primär druva</Label>
+                <Input
+                  id="grape"
+                  value={formData.primary_grape}
+                  onChange={(e) =>
+                    setFormData({ ...formData, primary_grape: e.target.value })
+                  }
+                />
+              </div>
 
-                {enrichment.tastingNotes && (
-                  <div>
-                    <h3 className="font-semibold mb-2">Provningsanteckningar</h3>
-                    <div className="space-y-2 text-sm text-neutral-700">
-                      {enrichment.tastingNotes.nose && (
-                        <p>
-                          <strong>Doft:</strong> {enrichment.tastingNotes.nose}
-                        </p>
-                      )}
-                      {enrichment.tastingNotes.palate && (
-                        <p>
-                          <strong>Smak:</strong> {enrichment.tastingNotes.palate}
-                        </p>
-                      )}
-                      {enrichment.tastingNotes.finish && (
-                        <p>
-                          <strong>Eftersmak:</strong> {enrichment.tastingNotes.finish}
-                        </p>
-                      )}
+              <div>
+                <Label htmlFor="alcohol">Alkoholhalt (%)</Label>
+                <Input
+                  id="alcohol"
+                  type="number"
+                  step="0.1"
+                  value={formData.alcohol_percentage}
+                  onChange={(e) =>
+                    setFormData({ ...formData, alcohol_percentage: e.target.value })
+                  }
+                  placeholder="13.5"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Location */}
+          <div className="space-y-4">
+            <h3 className="font-semibold text-lg border-b pb-2">Plats</h3>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="country">Land</Label>
+                <Input
+                  id="country"
+                  value={formData.country}
+                  onChange={(e) => setFormData({ ...formData, country: e.target.value })}
+                  required
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="region">Region</Label>
+                <Input
+                  id="region"
+                  value={formData.region}
+                  onChange={(e) => setFormData({ ...formData, region: e.target.value })}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="subRegion">Subregion</Label>
+                <Input
+                  id="subRegion"
+                  value={formData.sub_region}
+                  onChange={(e) =>
+                    setFormData({ ...formData, sub_region: e.target.value })
+                  }
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="appellation">Appellation</Label>
+                <Input
+                  id="appellation"
+                  value={formData.appellation}
+                  onChange={(e) =>
+                    setFormData({ ...formData, appellation: e.target.value })
+                  }
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Characteristics */}
+          <div className="space-y-4">
+            <h3 className="font-semibold text-lg border-b pb-2">Egenskaper</h3>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="sweetness">Sötma</Label>
+                <Select
+                  value={formData.sweetness_level}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, sweetness_level: value })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Välj" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="dry">Torr</SelectItem>
+                    <SelectItem value="off-dry">Halvtorr</SelectItem>
+                    <SelectItem value="medium">Medium</SelectItem>
+                    <SelectItem value="sweet">Söt</SelectItem>
+                    <SelectItem value="very_sweet">Mycket söt</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="body">Kropp</Label>
+                <Select
+                  value={formData.body}
+                  onValueChange={(value) => setFormData({ ...formData, body: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Välj" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="light">Lätt</SelectItem>
+                    <SelectItem value="medium">Medium</SelectItem>
+                    <SelectItem value="full">Fyllig</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+
+          {/* Status */}
+          <div className="space-y-4">
+            <h3 className="font-semibold text-lg border-b pb-2">Status</h3>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="status">Status</Label>
+                <Select
+                  value={formData.status}
+                  onValueChange={(value: 'draft' | 'active') =>
+                    setFormData({ ...formData, status: value })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">Aktiv</SelectItem>
+                    <SelectItem value="draft">Utkast</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex items-end">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={formData.verified}
+                    onChange={(e) =>
+                      setFormData({ ...formData, verified: e.target.checked })
+                    }
+                    className="w-4 h-4 rounded border-neutral-300"
+                  />
+                  <span className="text-sm">Verifierat vin</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          {/* Descriptions & Enrichment */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between border-b pb-2">
+              <h3 className="font-semibold text-lg">Beskrivningar & Enrichment</h3>
+              {onRegenerateEnrichment && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={onRegenerateEnrichment}
+                  className="gap-2"
+                >
+                  <Sparkles className="h-4 w-4" />
+                  Regenerera med AI
+                </Button>
+              )}
+            </div>
+
+            <div>
+              <Label htmlFor="summary">Sammanfattning</Label>
+              <Textarea
+                id="summary"
+                value={formData.ai_generated_summary}
+                onChange={(e) =>
+                  setFormData({ ...formData, ai_generated_summary: e.target.value })
+                }
+                rows={3}
+                placeholder="Kort beskrivning av vinet (2-3 meningar)"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="overview">Översikt</Label>
+              <Textarea
+                id="overview"
+                value={formData.enrichment_overview}
+                onChange={(e) =>
+                  setFormData({ ...formData, enrichment_overview: e.target.value })
+                }
+                rows={4}
+                placeholder="Översikt av producent och vinets positionering"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="terroir">Terroir</Label>
+              <Textarea
+                id="terroir"
+                value={formData.enrichment_terroir}
+                onChange={(e) =>
+                  setFormData({ ...formData, enrichment_terroir: e.target.value })
+                }
+                rows={4}
+                placeholder="Terroir och vingårdsdetaljer"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="winemaking">Vinframställning</Label>
+              <Textarea
+                id="winemaking"
+                value={formData.enrichment_winemaking}
+                onChange={(e) =>
+                  setFormData({ ...formData, enrichment_winemaking: e.target.value })
+                }
+                rows={4}
+                placeholder="Vinframställningstekniker"
+              />
+            </div>
+          </div>
+
+          {/* Tasting Notes */}
+          <div className="space-y-4">
+            <h3 className="font-semibold text-lg border-b pb-2">Provningsanteckningar</h3>
+
+            <div>
+              <Label htmlFor="nose">Doft</Label>
+              <Textarea
+                id="nose"
+                value={formData.enrichment_tasting_notes_nose}
+                onChange={(e) =>
+                  setFormData({ ...formData, enrichment_tasting_notes_nose: e.target.value })
+                }
+                rows={3}
+                placeholder="Aromatisk profil"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="palate">Smak</Label>
+              <Textarea
+                id="palate"
+                value={formData.enrichment_tasting_notes_palate}
+                onChange={(e) =>
+                  setFormData({ ...formData, enrichment_tasting_notes_palate: e.target.value })
+                }
+                rows={3}
+                placeholder="Smakprofil och textur"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="finish">Eftersmak</Label>
+              <Textarea
+                id="finish"
+                value={formData.enrichment_tasting_notes_finish}
+                onChange={(e) =>
+                  setFormData({ ...formData, enrichment_tasting_notes_finish: e.target.value })
+                }
+                rows={3}
+                placeholder="Eftersmakens karaktär"
+              />
+            </div>
+          </div>
+
+          {/* Serving & Food Pairings */}
+          <div className="space-y-4">
+            <h3 className="font-semibold text-lg border-b pb-2">Servering & Matpar</h3>
+
+            <div>
+              <Label htmlFor="serving">Servering</Label>
+              <Textarea
+                id="serving"
+                value={formData.enrichment_serving}
+                onChange={(e) =>
+                  setFormData({ ...formData, enrichment_serving: e.target.value })
+                }
+                rows={3}
+                placeholder="Serverings- och lagringsråd"
+              />
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <Label>Matpar</Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={addFoodPairing}
+                  className="gap-2"
+                >
+                  <Plus className="h-4 w-4" />
+                  Lägg till
+                </Button>
+              </div>
+
+              <div className="space-y-2">
+                {formData.enrichment_food_pairings.length === 0 ? (
+                  <p className="text-sm text-neutral-500 italic">Inga matpar ännu. Klicka "Lägg till" för att lägga till.</p>
+                ) : (
+                  formData.enrichment_food_pairings.map((pairing, index) => (
+                    <div key={index} className="flex gap-2">
+                      <Input
+                        value={pairing}
+                        onChange={(e) => updateFoodPairing(index, e.target.value)}
+                        placeholder="T.ex. Grillat rött kött"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeFoodPairing(index)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
                     </div>
-                  </div>
+                  ))
                 )}
+              </div>
+            </div>
 
-                {enrichment.serving && (
-                  <div>
-                    <h3 className="font-semibold mb-2">Servering</h3>
-                    <p className="text-sm text-neutral-700">{enrichment.serving}</p>
-                  </div>
-                )}
+            <div>
+              <Label htmlFor="signatureTraits">Signatur egenskaper</Label>
+              <Textarea
+                id="signatureTraits"
+                value={formData.enrichment_signature_traits}
+                onChange={(e) =>
+                  setFormData({ ...formData, enrichment_signature_traits: e.target.value })
+                }
+                rows={3}
+                placeholder="Egenskaper som gör vinet distinktivt"
+              />
+            </div>
+          </div>
 
-                {Array.isArray(enrichment.foodPairings) && enrichment.foodPairings.length > 0 && (
-                  <div>
-                    <h3 className="font-semibold mb-2">Matpar</h3>
-                    <ul className="text-sm text-neutral-700 list-disc list-inside space-y-1">
-                      {enrichment.foodPairings.map((pairing: string, i: number) => (
-                        <li key={i}>{pairing}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                {enrichment.signatureTraits && (
-                  <div>
-                    <h3 className="font-semibold mb-2">Signatur egenskaper</h3>
-                    <p className="text-sm text-neutral-700">{enrichment.signatureTraits}</p>
-                  </div>
-                )}
-              </>
-            )}
-
-            {/* Metadata */}
-            <div className="pt-4 border-t border-neutral-200">
-              <h3 className="font-semibold mb-3">Metadata</h3>
+          {/* Metadata (read-only) */}
+          {(wine.created_at || wine.updated_at) && (
+            <div className="space-y-4 pt-4 border-t border-neutral-200">
+              <h3 className="font-semibold text-sm text-neutral-600">Metadata</h3>
               <div className="grid grid-cols-2 gap-3 text-sm">
                 {wine.created_at && (
                   <div>
@@ -527,14 +634,25 @@ export function WineEditModal({ wine, onClose, onSave }: WineEditModalProps) {
                 )}
               </div>
             </div>
+          )}
 
-            <div className="flex items-center justify-end pt-4 border-t">
-              <Button variant="outline" onClick={onClose}>
-                Stäng
-              </Button>
-            </div>
+          {/* Actions */}
+          <div className="flex items-center justify-end gap-3 pt-4 border-t">
+            <Button type="button" variant="outline" onClick={onClose}>
+              Avbryt
+            </Button>
+            <Button type="submit" disabled={loading}>
+              {loading ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Sparar...
+                </>
+              ) : (
+                'Spara ändringar'
+              )}
+            </Button>
           </div>
-        )}
+        </form>
       </DialogContent>
     </Dialog>
   );
