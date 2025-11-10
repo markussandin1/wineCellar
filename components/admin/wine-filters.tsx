@@ -49,14 +49,14 @@ export function WineFilters({ filters, onChange }: WineFiltersProps) {
         {/* Wine Type Filter */}
         <div className="min-w-[180px]">
           <Select
-            value={filters.wineType[0] || ''}
-            onValueChange={(value) => onChange({ wineType: value ? [value] : [] })}
+            value={filters.wineType[0] || 'all'}
+            onValueChange={(value) => onChange({ wineType: value === 'all' ? [] : [value] })}
           >
             <SelectTrigger>
               <SelectValue placeholder="Vintyp" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Alla typer</SelectItem>
+              <SelectItem value="all">Alla typer</SelectItem>
               {wineTypes.map((type) => (
                 <SelectItem key={type} value={type}>
                   {type}
@@ -69,14 +69,14 @@ export function WineFilters({ filters, onChange }: WineFiltersProps) {
         {/* Country Filter */}
         <div className="min-w-[180px]">
           <Select
-            value={filters.country[0] || ''}
-            onValueChange={(value) => onChange({ country: value ? [value] : [] })}
+            value={filters.country[0] || 'all'}
+            onValueChange={(value) => onChange({ country: value === 'all' ? [] : [value] })}
           >
             <SelectTrigger>
               <SelectValue placeholder="Land" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Alla länder</SelectItem>
+              <SelectItem value="all">Alla länder</SelectItem>
               {countries.map((country) => (
                 <SelectItem key={country} value={country}>
                   {country}
@@ -89,14 +89,14 @@ export function WineFilters({ filters, onChange }: WineFiltersProps) {
         {/* Status Filter */}
         <div className="min-w-[180px]">
           <Select
-            value={filters.status || ''}
-            onValueChange={(value) => onChange({ status: value || null })}
+            value={filters.status || 'all'}
+            onValueChange={(value) => onChange({ status: value === 'all' ? null : value })}
           >
             <SelectTrigger>
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Alla</SelectItem>
+              <SelectItem value="all">Alla</SelectItem>
               <SelectItem value="active">Aktiv</SelectItem>
               <SelectItem value="draft">Utkast</SelectItem>
             </SelectContent>
