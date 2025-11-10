@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { uploadLabelImage } from '@/lib/supabase';
 import { labelScanAgent } from '@/lib/ai/agents/label-scan';
+import { wineEnrichmentAgent } from '@/lib/ai/agents/wine-enrichment';
 
 // Helper function to normalize text for comparison
 function normalize(text: string): string {
@@ -95,18 +96,59 @@ export async function POST(request: NextRequest) {
 
     const extracted = scanResult.data;
 
+    // Log extracted data for debugging
+    console.log('Extracted wine data:', {
+      wineName: extracted.wineName,
+      producerName: extracted.producerName,
+      vintage: extracted.vintage,
+      wineType: extracted.wineType,
+      country: extracted.country,
+      region: extracted.region,
+      confidence: extracted.confidence,
+    });
+
+    // Validate minimum required data (wine name is essential)
+    if (!extracted.wineName) {
+      throw new Error(
+        'Label scan failed to extract wine name. Please ensure the label is clearly visible and try again.'
+      );
+    }
+
+    // If producer name is missing, use wine name as fallback
+    if (!extracted.producerName) {
+      console.warn('Producer name not extracted, using wine name as fallback');
+      extracted.producerName = extracted.wineName;
+    }
+
     // Step 2: Search for existing wine in database
     console.log('Searching for existing wine in database...');
-    const { data: existingWines, error: searchError } = await supabase
+
+    // Search by both wine name AND producer name to increase chances of finding matches
+    const { data: winesByName } = await supabase
+      .from('wines')
+      .select('*')
+      .ilike('name', `%${extracted.wineName}%`)
+      .limit(10);
+
+    const { data: winesByProducer } = await supabase
       .from('wines')
       .select('*')
       .ilike('producer_name', `%${extracted.producerName}%`)
       .limit(10);
 
-    if (searchError) {
-      console.error('Error searching for wines:', searchError);
-      // Continue without existing wines instead of failing
-    }
+    // Combine and deduplicate candidates
+    const candidatesMap = new Map();
+    [...(winesByName || []), ...(winesByProducer || [])].forEach(wine => {
+      candidatesMap.set(wine.id, wine);
+    });
+    const existingWines = Array.from(candidatesMap.values());
+
+    // Generic wine names that need strict producer matching
+    const GENERIC_WINE_NAMES = [
+      'pinot noir', 'chardonnay', 'cabernet sauvignon', 'merlot', 'syrah', 'shiraz',
+      'sauvignon blanc', 'riesling', 'malbec', 'tempranillo', 'sangiovese',
+      'zinfandel', 'grenache', 'petit verdot', 'viognier', 'gewürztraminer'
+    ];
 
     // Find best match using similarity scoring
     let bestMatch = null;
@@ -115,18 +157,54 @@ export async function POST(request: NextRequest) {
     console.log(`Comparing extracted data against ${existingWines?.length || 0} candidates:`);
     console.log(`  Extracted: "${extracted.wineName}" by "${extracted.producerName}" (${extracted.vintage || 'NV'})`);
 
+    // Check if wine name is generic (just the grape variety)
+    const isGenericName = GENERIC_WINE_NAMES.includes(normalize(extracted.wineName));
+
     for (const wine of (existingWines || [])) {
       const nameScore = similarity(wine.name, extracted.wineName);
       const producerScore = similarity(wine.producer_name, extracted.producerName);
       const vintageMatch = !extracted.vintage || wine.vintage === extracted.vintage;
 
-      const totalScore = (nameScore + producerScore) / 2;
+      // VETO RULE: If wine name is generic AND producer match is poor, skip this candidate
+      // This prevents "Pinot Noir" from matching any other "Pinot Noir" with different producer
+      if (isGenericName && producerScore < 0.40) {
+        console.log(`  Candidate: "${wine.name}" by "${wine.producer_name}" (${wine.vintage || 'NV'})`);
+        console.log(`    REJECTED: Generic wine name "${extracted.wineName}" requires producer match >40% (got ${(producerScore * 100).toFixed(1)}%)`);
+        continue;
+      }
+
+      // Dynamic weighting based on whether name is generic
+      // Generic names: Producer is MORE important (40% name, 60% producer)
+      // Unique names: Name is more important (70% name, 30% producer)
+      const nameWeight = isGenericName ? 0.40 : 0.70;
+      const producerWeight = isGenericName ? 0.60 : 0.30;
+      let totalScore = (nameScore * nameWeight) + (producerScore * producerWeight);
+
+      // Bonus: Prefer wines with more complete data (has vintage, country, region, etc.)
+      const hasVintage = wine.vintage !== null;
+      const hasCountry = wine.country !== null && wine.country !== '';
+      const hasRegion = wine.region !== null && wine.region !== '';
+      const hasEnrichment = wine.enrichment_data !== null;
+
+      // Add small bonus for data completeness (max 5% boost)
+      let completenessBonus = 0;
+      if (hasVintage) completenessBonus += 0.01;
+      if (hasCountry) completenessBonus += 0.01;
+      if (hasRegion) completenessBonus += 0.01;
+      if (hasEnrichment) completenessBonus += 0.02;
+
+      totalScore += completenessBonus;
 
       console.log(`  Candidate: "${wine.name}" by "${wine.producer_name}" (${wine.vintage || 'NV'})`);
-      console.log(`    Name: ${(nameScore * 100).toFixed(1)}%, Producer: ${(producerScore * 100).toFixed(1)}%, Total: ${(totalScore * 100).toFixed(1)}%, Vintage match: ${vintageMatch}`);
+      console.log(`    Name: ${(nameScore * 100).toFixed(1)}%, Producer: ${(producerScore * 100).toFixed(1)}%, Weighted: ${(totalScore * 100).toFixed(1)}% (${isGenericName ? 'generic name' : 'unique name'}), Vintage match: ${vintageMatch}`);
 
-      // If we have a good match (>80% similarity) and vintage matches
-      if (totalScore > 0.80 && vintageMatch && totalScore > bestScore) {
+      // Stricter threshold: 85% for matches
+      // Require vintage match to avoid false positives
+      // Require minimum producer similarity (40%) for generic wine names
+      const meetsThreshold = totalScore > 0.85;
+      const meetsProducerRequirement = !isGenericName || producerScore >= 0.40;
+
+      if (meetsThreshold && vintageMatch && meetsProducerRequirement && totalScore > bestScore) {
         bestMatch = wine;
         bestScore = totalScore;
       }
@@ -147,6 +225,7 @@ export async function POST(request: NextRequest) {
         primaryGrape: bestMatch.primary_grape,
         confidence: bestScore,
         existingWineId: bestMatch.id,
+        wasCreatedNow: false, // Wine already existed
         imageUrl, // User's scanned image (saved to their bottle)
         wineImageUrl: bestMatch.primary_label_image_url, // Wine's official image from database
         // Include enrichment data if available
@@ -155,13 +234,46 @@ export async function POST(request: NextRequest) {
         description: bestMatch.description,
         tastingNotes: bestMatch.tasting_notes,
         aiGeneratedSummary: bestMatch.ai_generated_summary,
+        // IMPORTANT: Preserve original scanned data for wine rejection flow
+        // If user clicks "This is not the correct wine", we need the original scan data
+        originalScannedData: {
+          wineName: extracted.wineName,
+          producerName: extracted.producerName,
+          vintage: extracted.vintage,
+          wineType: extracted.wineType,
+          country: extracted.country,
+          region: extracted.region,
+          subRegion: extracted.subRegion,
+          primaryGrape: extracted.primaryGrape,
+        },
       });
     }
 
-    console.log('✗ No existing wine found matching criteria (>80% similarity + vintage match)');
+    console.log('✗ No existing wine found matching criteria (>85% similarity + vintage match + producer requirements)');
+    console.log('Generating wine enrichment (not saved to DB yet)...');
 
-    // No match found - return extracted data
-    // Frontend will decide whether to create wine with enrichment
+    // Step 3: No match found - run enrichment (in memory, not saved to DB)
+    const enrichmentResult = await wineEnrichmentAgent.execute({
+      name: extracted.wineName,
+      producerName: extracted.producerName,
+      wineType: extracted.wineType,
+      vintage: extracted.vintage,
+      country: extracted.country,
+      region: extracted.region,
+      subRegion: extracted.subRegion,
+      primaryGrape: extracted.primaryGrape,
+    });
+
+    let enrichmentData = null;
+    if (enrichmentResult.success && enrichmentResult.data) {
+      enrichmentData = enrichmentResult.data;
+      console.log('Wine enrichment generated successfully');
+    } else {
+      console.warn('Wine enrichment failed:', enrichmentResult.error);
+    }
+
+    // Return extracted data + enrichment (NOT saved to DB yet)
+    // User will review/edit enrichment before saving
     return NextResponse.json({
       wineName: extracted.wineName,
       producerName: extracted.producerName,
@@ -174,6 +286,7 @@ export async function POST(request: NextRequest) {
       confidence: extracted.confidence,
       existingWineId: null,
       imageUrl,
+      enrichmentData, // Enrichment data for preview/edit (not saved to DB)
     });
   } catch (error: any) {
     console.error('Label scanning error:', error);

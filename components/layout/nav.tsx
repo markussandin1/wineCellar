@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
-import { Wine, Home, LogOut, Settings } from 'lucide-react';
+import { Wine, Home, LogOut, Settings, ShieldCheck } from 'lucide-react';
 import { logout } from '@/app/actions/auth';
 import { playfair } from '@/lib/design-system/fonts';
 
@@ -25,7 +25,11 @@ const navItems = [
   },
 ];
 
-export function Nav() {
+interface NavProps {
+  isAdmin?: boolean;
+}
+
+export function Nav({ isAdmin = false }: NavProps) {
   const pathname = usePathname();
 
   return (
@@ -69,6 +73,23 @@ export function Nav() {
                 </Link>
               );
             })}
+
+            {/* Admin Link */}
+            {isAdmin && (
+              <Link
+                href="/admin/analytics"
+                className={cn(
+                  'flex items-center gap-2 text-sm font-medium transition-all',
+                  'hover:text-amber-400 hover:scale-105',
+                  pathname.startsWith('/admin')
+                    ? 'text-amber-400'
+                    : 'text-gray-300'
+                )}
+              >
+                <ShieldCheck className="h-4 w-4" />
+                Admin
+              </Link>
+            )}
           </div>
 
           {/* Logout Button */}
@@ -107,6 +128,22 @@ export function Nav() {
               </Link>
             );
           })}
+
+          {/* Admin Link (Mobile) */}
+          {isAdmin && (
+            <Link
+              href="/admin/analytics"
+              className={cn(
+                'flex items-center gap-2 text-sm font-medium transition-all',
+                pathname.startsWith('/admin')
+                  ? 'text-amber-400'
+                  : 'text-gray-300 hover:text-amber-400'
+              )}
+            >
+              <ShieldCheck className="h-4 w-4" />
+              Admin
+            </Link>
+          )}
         </div>
       </div>
     </nav>

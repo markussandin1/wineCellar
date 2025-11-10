@@ -27,7 +27,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0A0A0A] via-[#1A1410] to-[#0A0A0A]">
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-4 sm:py-8">
         {/* Page Header */}
         <PageHeader
           title="Dashboard"
@@ -35,16 +35,17 @@ export default async function DashboardPage() {
           action={
             <Link
               href="/cellar/add"
-              className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-amber-400 to-yellow-500 text-black font-semibold rounded-lg hover:from-amber-500 hover:to-yellow-600 transition-all hover:scale-105 shadow-lg shadow-amber-500/20"
+              className="inline-flex items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 text-sm sm:text-base bg-gradient-to-r from-amber-400 to-yellow-500 text-black font-semibold rounded-lg hover:from-amber-500 hover:to-yellow-600 transition-all hover:scale-105 shadow-lg shadow-amber-500/20"
             >
               <Plus className="h-4 w-4" />
-              Add Bottle
+              <span className="hidden sm:inline">Add Bottle</span>
+              <span className="sm:hidden">Add</span>
             </Link>
           }
         />
 
         {/* Stats Grid */}
-        <div className="grid gap-6 md:grid-cols-3 mb-12">
+        <div className="grid gap-4 sm:gap-6 md:grid-cols-3 mb-8 sm:mb-12">
           <StatCard
             label="Total Bottles"
             value={stats.totalBottles}
@@ -68,15 +69,15 @@ export default async function DashboardPage() {
         </div>
 
         {/* Food Pairing Widget - Full Width */}
-        <div className="mb-12">
+        <div className="mb-8 sm:mb-12">
           <FoodPairingWidget />
         </div>
 
         {/* Insights */}
-        <div className="grid gap-6 md:grid-cols-2 mb-12">
+        <div className="grid gap-4 sm:gap-6 md:grid-cols-2 mb-8 sm:mb-12">
           {/* Top Wine Types */}
-          <div className="relative overflow-hidden rounded-xl border border-amber-900/30 bg-gradient-to-br from-[#2A1F1A] to-[#1A1410] p-6">
-            <h2 className="text-lg font-semibold mb-4 text-amber-400">Top Wine Types</h2>
+          <div className="relative overflow-hidden rounded-xl border border-amber-900/30 bg-gradient-to-br from-[#2A1F1A] to-[#1A1410] p-4 sm:p-6">
+            <h2 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4 text-amber-400">Top Wine Types</h2>
             {topTypes.length > 0 ? (
               <div className="space-y-3">
                 {topTypes.map(([type, count]) => (
@@ -92,8 +93,8 @@ export default async function DashboardPage() {
           </div>
 
           {/* Top Regions */}
-          <div className="relative overflow-hidden rounded-xl border border-amber-900/30 bg-gradient-to-br from-[#2A1F1A] to-[#1A1410] p-6">
-            <h2 className="text-lg font-semibold mb-4 text-amber-400">Top Regions</h2>
+          <div className="relative overflow-hidden rounded-xl border border-amber-900/30 bg-gradient-to-br from-[#2A1F1A] to-[#1A1410] p-4 sm:p-6">
+            <h2 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4 text-amber-400">Top Regions</h2>
             {topRegions.length > 0 ? (
               <div className="space-y-3">
                 {topRegions.map(([region, count]) => (
@@ -111,8 +112,8 @@ export default async function DashboardPage() {
 
         {/* Recent Additions */}
         <div>
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold text-amber-400">Recent Additions</h2>
+          <div className="flex justify-between items-center mb-4 sm:mb-6">
+            <h2 className="text-lg sm:text-2xl font-bold text-amber-400">Recent Additions</h2>
             <Link href="/cellar" className="text-sm text-amber-400 hover:text-yellow-400 transition-colors font-medium">
               View All →
             </Link>

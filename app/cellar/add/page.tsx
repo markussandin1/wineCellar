@@ -28,7 +28,7 @@ export default async function AddBottlePage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0A0A0A] via-[#1A1410] to-[#0A0A0A]">
-      <div className="container mx-auto px-4 py-8 max-w-2xl">
+      <div className="container mx-auto px-4 py-4 sm:py-8 max-w-2xl">
         <PageHeader
           title="Add New Bottle"
           subtitle="Choose how you want to add your wine"

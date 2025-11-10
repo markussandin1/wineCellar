@@ -10,8 +10,8 @@ export const bottleFormSchema = z.object({
   wineName: z.string().min(1, 'Wine name is required'),
   vintage: optionalText,
   wineType: z.string().min(1, 'Wine type is required'),
-  country: z.string().min(1, 'Country is required'),
-  region: z.string().min(1, 'Region is required'),
+  country: optionalText,
+  region: optionalText,
   subRegion: optionalText,
   primaryGrape: optionalText,
   bottleSize: z.coerce

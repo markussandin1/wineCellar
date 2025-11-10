@@ -582,64 +582,35 @@ export async function createBottleFromScan(formData: FormData) {
   };
 
   try {
-    let wineRecord: any = null;
-    let createdNewWine = false;
-
-    if (existingWineId) {
-      const { data: wines, error } = await supabase
-        .from('wines')
-        .select('*')
-        .eq('id', existingWineId as string);
-
-      if (error || !wines || wines.length === 0) {
-        throw new Error('Selected wine could not be found');
-      }
-
-      wineRecord = wines[0];
-
-      if (imageUrl && !wineRecord.primary_label_image_url) {
-        const { data: updatedWines, error: updateError } = await supabase
-          .from('wines')
-          .update({ primary_label_image_url: imageUrl })
-          .eq('id', wineRecord.id)
-          .select('*');
-
-        if (updateError) {
-          console.error('Error updating wine image:', updateError);
-        } else if (updatedWines && updatedWines.length > 0) {
-          wineRecord = updatedWines[0];
-          console.log('Set primary label image for existing wine');
-        }
-      }
-    } else {
-      const { data: newWines, error: createError } = await supabase
-        .from('wines')
-        .insert({
-          name: wineData.wineName,
-          full_name: `${wineData.producerName} ${wineData.wineName} ${wineData.vintage || 'NV'}`,
-          vintage: wineData.vintage ? Number(wineData.vintage) : null,
-          producer_name: wineData.producerName,
-          wine_type: wineData.wineType as any,
-          country: wineData.country,
-          region: wineData.region,
-          sub_region: wineData.subRegion || null,
-          primary_grape: wineData.primaryGrape || null,
-          primary_label_image_url: imageUrl,
-        })
-        .select('*');
-
-      if (createError || !newWines || newWines.length === 0) {
-        console.error('Error creating wine:', createError);
-        throw new Error(createError?.message || 'Failed to create wine');
-      }
-
-      wineRecord = newWines[0];
-      createdNewWine = true;
-      console.log('Created new wine:', wineRecord.id);
+    // Wine MUST already exist - it should have been created/matched during the scan phase
+    if (!existingWineId) {
+      throw new Error('Wine ID is required. The wine should have been created during the scan phase.');
     }
 
-    if (!wineRecord) {
-      throw new Error('Could not create or locate wine record');
+    // Fetch the existing wine
+    const { data: wines, error } = await supabase
+      .from('wines')
+      .select('*')
+      .eq('id', existingWineId as string);
+
+    if (error || !wines || wines.length === 0) {
+      throw new Error('Wine could not be found in database');
+    }
+
+    const wineRecord = wines[0];
+
+    // Update wine's primary label image if it doesn't have one yet
+    if (imageUrl && !wineRecord.primary_label_image_url) {
+      const { error: updateError } = await supabase
+        .from('wines')
+        .update({ primary_label_image_url: imageUrl })
+        .eq('id', wineRecord.id);
+
+      if (updateError) {
+        console.error('Error updating wine image:', updateError);
+      } else {
+        console.log('Set primary label image for wine');
+      }
     }
 
     const { data: newBottles, error: bottleError} = await supabase
@@ -672,32 +643,8 @@ export async function createBottleFromScan(formData: FormData) {
 
     const bottle = newBottles[0];
 
-    if (createdNewWine) {
-      const generated = await generateWineDescription({
-        name: wineRecord.name,
-        producerName: wineRecord.producer_name,
-        wineType: wineRecord.wine_type ? wineRecord.wine_type.toString() : undefined,
-        vintage: wineRecord.vintage,
-        country: wineRecord.country,
-        region: wineRecord.region,
-        subRegion: wineRecord.sub_region,
-        primaryGrape: wineRecord.primary_grape,
-      });
-
-      if (generated) {
-        const { error: updateError } = await supabase
-          .from('wines')
-          .update({
-            description: generated.description,
-            ai_generated_summary: generated.summary,
-          })
-          .eq('id', wineRecord.id);
-
-        if (updateError) {
-          console.error('Error updating wine with AI description:', updateError);
-        }
-      }
-    }
+    // Note: Wine enrichment is now handled during the scan phase (in wines/create API)
+    // No need to call generateWineDescription here anymore
 
     if (imageUrl) {
       const { error: scanError } = await supabase

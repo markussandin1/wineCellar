@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { ScannedBottleForm } from './scanned-bottle-form';
 
-type ScanStep = 'upload' | 'processing' | 'enriching' | 'review';
+type ScanStep = 'upload' | 'processing' | 'review';
 
 interface ExtractedData {
   wineName: string;
@@ -18,7 +18,8 @@ interface ExtractedData {
   subRegion?: string;
   primaryGrape?: string;
   confidence: number;
-  existingWineId?: string; // If we found a match in DB
+  existingWineId?: string; // If we found a match in DB or just created it
+  wasCreatedNow?: boolean; // TRUE if wine was just created, FALSE if it already existed
   imageUrl?: string | null; // User's scanned label image URL (for their bottle)
   wineImageUrl?: string | null; // Wine's official label image from database
   enrichmentData?: any; // Wine enrichment data if available
@@ -71,7 +72,8 @@ export function LabelScanner({ initialPlacement, userCurrency }: LabelScannerPro
     setStep('processing');
 
     try {
-      // Step 1: Scan label to extract wine data
+      // Scan label to extract wine data + search DB + run enrichment if no match
+      // NOTE: Enrichment is generated but NOT saved to database yet
       const formData = new FormData();
       formData.append('image', selectedImage);
 
@@ -87,59 +89,22 @@ export function LabelScanner({ initialPlacement, userCurrency }: LabelScannerPro
 
       const scanData = await scanResponse.json();
 
-      // Step 2: If wine doesn't exist, create it with enrichment
-      if (!scanData.existingWineId) {
-        console.log('Wine not found, creating with enrichment...');
-        console.log('Scan data to be sent:', {
-          name: scanData.wineName,
-          producerName: scanData.producerName,
-          wineType: scanData.wineType,
-          country: scanData.country,
-          region: scanData.region,
-        });
-        setStep('enriching');
-
-        const createResponse = await fetch('/api/wines/create', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            name: scanData.wineName,
-            producerName: scanData.producerName,
-            wineType: scanData.wineType,
-            vintage: scanData.vintage,
-            country: scanData.country,
-            region: scanData.region,
-            subRegion: scanData.subRegion,
-            primaryGrape: scanData.primaryGrape,
-            primaryLabelImageUrl: scanData.imageUrl,
-            runEnrichment: true,
-          }),
-        });
-
-        if (!createResponse.ok) {
-          const errorData = await createResponse.json();
-          // If wine already exists (race condition), use existing wine ID
-          if (createResponse.status === 409 && errorData.wineId) {
-            console.log('Wine already exists in database, using existing ID:', errorData.wineId);
-            scanData.existingWineId = errorData.wineId;
-            // Note: enrichmentSucceeded is undefined here, which signals "existing wine found"
-          } else {
-            throw new Error(errorData.error || 'Failed to create wine');
-          }
-        } else {
-          const createData = await createResponse.json();
-
-          // Update scanData with newly created wine ID and enrichment
-          if (createData.success && createData.wine) {
-            scanData.existingWineId = createData.wine.id;
-            scanData.enrichmentData = createData.wine.enrichmentData;
-            scanData.enrichmentSucceeded = createData.enrichmentSucceeded ?? false;
-          }
-        }
+      // Validate that we have minimum required data
+      if (!scanData.wineName) {
+        throw new Error(
+          'Label scan could not extract the wine name. Please try again with a clearer photo.'
+        );
       }
 
+      // If producer name is missing, use wine name as fallback
+      if (!scanData.producerName) {
+        console.warn('Producer name not extracted, using wine name as fallback');
+        scanData.producerName = scanData.wineName;
+      }
+
+      // scanData now contains either:
+      // 1. existingWineId (wine found in DB) OR
+      // 2. enrichmentData (new wine enrichment generated, not saved yet)
       setExtractedData(scanData);
       setStep('review');
     } catch (err: any) {
@@ -265,7 +230,7 @@ export function LabelScanner({ initialPlacement, userCurrency }: LabelScannerPro
     );
   }
 
-  // Processing step
+  // Processing step (extraction + search + enrichment if needed)
   if (step === 'processing') {
     return (
       <div className="rounded-lg border bg-card p-12">
@@ -274,27 +239,10 @@ export function LabelScanner({ initialPlacement, userCurrency }: LabelScannerPro
           <div className="text-center">
             <h3 className="font-semibold">Analyzing label...</h3>
             <p className="text-sm text-muted-foreground mt-1">
-              Extracting wine information
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Enriching step (creating new wine with AI enrichment)
-  if (step === 'enriching') {
-    return (
-      <div className="rounded-lg border bg-card p-12">
-        <div className="flex flex-col items-center justify-center space-y-4">
-          <Loader2 className="h-12 w-12 animate-spin text-primary" />
-          <div className="text-center">
-            <h3 className="font-semibold">Creating wine profile...</h3>
-            <p className="text-sm text-muted-foreground mt-1">
-              Generating sommelier-quality tasting notes and details
+              Searching catalog and preparing wine profile
             </p>
             <p className="text-xs text-muted-foreground mt-2">
-              This may take 10-15 seconds
+              This may take 10-15 seconds for new wines
             </p>
           </div>
         </div>

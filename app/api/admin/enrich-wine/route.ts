@@ -1,15 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { requireAdmin } from '@/lib/auth/admin';
 import { wineEnrichmentAgent } from '@/lib/ai/agents/wine-enrichment';
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    // Verify admin access
+    await requireAdmin();
 
-    if (!user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const supabase = await createClient();
 
     const body = await request.json();
     const { wineId } = body;

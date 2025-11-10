@@ -71,20 +71,20 @@ export function FoodPairingWidget({ className = '' }: FoodPairingWidgetProps) {
   };
 
   return (
-    <div className={`relative overflow-hidden rounded-xl border border-amber-900/30 bg-gradient-to-br from-[#2A1F1A] to-[#1A1410] p-6 ${className}`}>
+    <div className={`relative overflow-hidden rounded-xl border border-amber-900/30 bg-gradient-to-br from-[#2A1F1A] to-[#1A1410] p-4 sm:p-6 ${className}`}>
       {/* Header */}
-      <div className="flex items-center gap-3 mb-4">
+      <div className="flex items-center gap-3 mb-3 sm:mb-4">
         <div className="p-2 rounded-lg bg-amber-500/10">
           <ChefHat className="h-5 w-5 text-amber-400" />
         </div>
         <div>
-          <h2 className="text-lg font-semibold text-amber-400">Food Pairing</h2>
-          <p className="text-sm text-gray-400">Find wines for your dish</p>
+          <h2 className="text-base sm:text-lg font-semibold text-amber-400">Food Pairing</h2>
+          <p className="text-xs sm:text-sm text-gray-400">Find wines for your dish</p>
         </div>
       </div>
 
       {/* Search Form */}
-      <form onSubmit={handleSearch} className="mb-6">
+      <form onSubmit={handleSearch} className="mb-4 sm:mb-6">
         <div className="relative">
           <input
             type="text"
@@ -92,7 +92,7 @@ export function FoodPairingWidget({ className = '' }: FoodPairingWidgetProps) {
             onChange={(e) => setDish(e.target.value)}
             placeholder="E.g., pasta carbonara, grilled salmon..."
             disabled={isSearching}
-            className="w-full px-4 py-3 pl-10 rounded-lg bg-[#1A1410] border border-amber-900/30 text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500/50 disabled:opacity-50"
+            className="w-full px-4 py-2.5 sm:py-3 pl-10 rounded-lg bg-[#1A1410] border border-amber-900/30 text-sm sm:text-base text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500/50 disabled:opacity-50"
           />
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
         </div>
@@ -100,7 +100,7 @@ export function FoodPairingWidget({ className = '' }: FoodPairingWidgetProps) {
         <button
           type="submit"
           disabled={isSearching || !dish.trim()}
-          className="mt-3 w-full inline-flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-amber-400 to-yellow-500 text-black font-semibold rounded-lg hover:from-amber-500 hover:to-yellow-600 transition-all hover:scale-105 shadow-lg shadow-amber-500/20 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+          className="mt-2.5 sm:mt-3 w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 sm:py-3 text-sm sm:text-base bg-gradient-to-r from-amber-400 to-yellow-500 text-black font-semibold rounded-lg hover:from-amber-500 hover:to-yellow-600 transition-all hover:scale-105 shadow-lg shadow-amber-500/20 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
         >
           {isSearching ? (
             <>

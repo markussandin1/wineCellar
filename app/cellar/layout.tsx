@@ -1,4 +1,4 @@
-import { Nav } from '@/components/layout/nav';
+import { NavWrapper } from '@/components/layout/nav-wrapper';
 
 export default function CellarLayout({
   children,
@@ -7,7 +7,7 @@ export default function CellarLayout({
 }) {
   return (
     <>
-      <Nav />
+      <NavWrapper />
       {children}
     </>
   );

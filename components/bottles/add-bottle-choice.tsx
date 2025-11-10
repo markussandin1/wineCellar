@@ -22,9 +22,10 @@ export function AddBottleChoice({ userCurrency }: AddBottleChoiceProps) {
       <div>
         <button
           onClick={() => setMode('choice')}
-          className="mb-6 text-sm text-amber-400 hover:text-yellow-400 transition-colors font-medium"
+          className="mb-4 sm:mb-6 px-3 py-2 rounded-lg bg-amber-900/20 border border-amber-900/30 text-sm text-amber-400 hover:text-yellow-400 hover:bg-amber-900/30 transition-colors font-medium inline-flex items-center gap-2"
         >
-          ← Back to options
+          <span>←</span>
+          <span>Back to options</span>
         </button>
         <LabelScanner initialPlacement={placement} userCurrency={userCurrency} />
       </div>
@@ -36,9 +37,10 @@ export function AddBottleChoice({ userCurrency }: AddBottleChoiceProps) {
       <div>
         <button
           onClick={() => setMode('choice')}
-          className="mb-6 text-sm text-amber-400 hover:text-yellow-400 transition-colors font-medium"
+          className="mb-4 sm:mb-6 px-3 py-2 rounded-lg bg-amber-900/20 border border-amber-900/30 text-sm text-amber-400 hover:text-yellow-400 hover:bg-amber-900/30 transition-colors font-medium inline-flex items-center gap-2"
         >
-          ← Back to options
+          <span>←</span>
+          <span>Back to options</span>
         </button>
         <BatchLabelScanner initialPlacement={placement} userCurrency={userCurrency} />
       </div>
@@ -50,9 +52,10 @@ export function AddBottleChoice({ userCurrency }: AddBottleChoiceProps) {
       <div>
         <button
           onClick={() => setMode('choice')}
-          className="mb-6 text-sm text-amber-400 hover:text-yellow-400 transition-colors font-medium"
+          className="mb-4 sm:mb-6 px-3 py-2 rounded-lg bg-amber-900/20 border border-amber-900/30 text-sm text-amber-400 hover:text-yellow-400 hover:bg-amber-900/30 transition-colors font-medium inline-flex items-center gap-2"
         >
-          ← Back to options
+          <span>←</span>
+          <span>Back to options</span>
         </button>
         <BottleForm initialPlacement={placement} />
       </div>
@@ -168,7 +171,7 @@ export function AddBottleChoice({ userCurrency }: AddBottleChoiceProps) {
 
       <div className="rounded-xl border border-amber-900/20 bg-amber-900/10 p-4 text-sm text-gray-300">
         <strong className="text-amber-400">Tip:</strong> Use batch upload if you have multiple bottles to add. Each label is processed
-        separately by AI, and you can review them one by one before saving.
+        separately, and you can review them one by one before saving.
       </div>
     </div>
   );

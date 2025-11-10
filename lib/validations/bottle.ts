@@ -8,8 +8,8 @@ export const bottleSchema = z.object({
   vintage: z.coerce.number().int().min(1900).max(new Date().getFullYear() + 5).nullable().optional(),
   producerName: z.string().min(1, 'Producer name is required'),
   wineType: z.enum(['red', 'white', 'rose', 'sparkling', 'dessert', 'fortified']),
-  country: z.string().min(1, 'Country is required'),
-  region: z.string().min(1, 'Region is required'),
+  country: z.string().optional(),
+  region: z.string().optional(),
   subRegion: z.string().optional(),
   primaryGrape: z.string().optional(),
 

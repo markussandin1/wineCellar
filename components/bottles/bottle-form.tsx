@@ -232,7 +232,7 @@ export function BottleForm({ initialPlacement = 'cellar' }: BottleFormProps) {
 
   return (
     <FormProvider {...form}>
-      <form onSubmit={onSubmit} className="space-y-6 rounded-lg border bg-card p-6">
+      <form onSubmit={onSubmit} className="space-y-4 sm:space-y-6 rounded-lg border bg-card p-4 sm:p-6">
         {error && (
           <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{error}</div>
         )}
@@ -240,8 +240,8 @@ export function BottleForm({ initialPlacement = 'cellar' }: BottleFormProps) {
         <WatchListToggle description={WATCHLIST_DESCRIPTION} />
 
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">Wine Information</h2>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <h2 className="text-base sm:text-lg font-semibold">Wine Information</h2>
             {selectedWine && (
               <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
                 <Check className="h-4 w-4" />
@@ -433,7 +433,7 @@ export function BottleForm({ initialPlacement = 'cellar' }: BottleFormProps) {
         </div>
 
         <div className="space-y-4">
-          <h2 className="text-lg font-semibold">Label Image</h2>
+          <h2 className="text-base sm:text-lg font-semibold">Label Image</h2>
 
           {!imagePreview ? (
             <div>
@@ -485,11 +485,11 @@ export function BottleForm({ initialPlacement = 'cellar' }: BottleFormProps) {
 
         <StorageNotesFields />
 
-        <div className="flex gap-3 justify-end pt-4 border-t">
+        <div className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-3 sm:justify-end pt-4 border-t">
           <button
             type="button"
             onClick={() => router.back()}
-            className="rounded-md border bg-background px-4 py-2 text-sm font-medium hover:bg-accent"
+            className="rounded-md border bg-background px-4 py-2.5 text-sm font-medium hover:bg-accent"
             disabled={isSubmitting}
           >
             Cancel
@@ -497,7 +497,7 @@ export function BottleForm({ initialPlacement = 'cellar' }: BottleFormProps) {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+            className="rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
           >
             {isSubmitting ? 'Adding...' : 'Add Bottle'}
           </button>

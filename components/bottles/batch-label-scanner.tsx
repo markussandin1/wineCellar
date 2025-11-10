@@ -319,7 +319,7 @@ export function BatchLabelScanner({ initialPlacement, userCurrency }: BatchLabel
           <div>
             <h3 className="text-lg font-semibold mb-2">Batch Upload</h3>
             <p className="text-sm text-muted-foreground">
-              Upload up to {MAX_IMAGES} wine label images at once. Each will be processed by AI separately.
+              Upload up to {MAX_IMAGES} wine label images at once. Each will be processed separately.
             </p>
           </div>
 

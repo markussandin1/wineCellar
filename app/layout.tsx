@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { ServiceWorkerManager } from "@/components/pwa/service-worker-manager";
+import { Toaster } from "@/components/ui/toaster";
 
 const inter = Inter({ subsets: ["latin"] });
 const isPwaEnabled = process.env.NEXT_PUBLIC_ENABLE_PWA === "true";
@@ -29,6 +30,7 @@ export default function RootLayout({
       <body className={inter.className}>
         {!isPwaEnabled && <ServiceWorkerManager disabled />}
         {children}
+        <Toaster />
       </body>
     </html>
   );

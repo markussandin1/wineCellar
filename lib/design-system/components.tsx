@@ -205,21 +205,21 @@ export function PageHeader({
   className
 }: PageHeaderProps) {
   return (
-    <div className={cn('flex justify-between items-start mb-8', className)}>
+    <div className={cn('flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-6 sm:mb-8', className)}>
       <div>
         <h1 className={cn(
           playfair.className,
-          'text-4xl md:text-5xl font-bold mb-2',
+          'text-2xl sm:text-4xl md:text-5xl font-bold mb-2',
           'bg-gradient-to-r from-amber-200 via-yellow-400 to-amber-500',
           'bg-clip-text text-transparent'
         )}>
           {title}
         </h1>
         {subtitle && (
-          <p className="text-lg text-gray-300">{subtitle}</p>
+          <p className="text-sm sm:text-base md:text-lg text-gray-300">{subtitle}</p>
         )}
       </div>
-      {action && <div>{action}</div>}
+      {action && <div className="sm:flex-shrink-0">{action}</div>}
     </div>
   );
 }
