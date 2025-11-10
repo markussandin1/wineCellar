@@ -485,7 +485,7 @@ export function WineEditModal({ wine, onClose, onSave }: WineEditModalProps) {
                   </div>
                 )}
 
-                {enrichment.foodPairings && enrichment.foodPairings.length > 0 && (
+                {Array.isArray(enrichment.foodPairings) && enrichment.foodPairings.length > 0 && (
                   <div>
                     <h3 className="font-semibold mb-2">Matpar</h3>
                     <ul className="text-sm text-neutral-700 list-disc list-inside space-y-1">
@@ -496,14 +496,10 @@ export function WineEditModal({ wine, onClose, onSave }: WineEditModalProps) {
                   </div>
                 )}
 
-                {enrichment.signatureTraits && enrichment.signatureTraits.length > 0 && (
+                {enrichment.signatureTraits && (
                   <div>
                     <h3 className="font-semibold mb-2">Signatur egenskaper</h3>
-                    <ul className="text-sm text-neutral-700 list-disc list-inside space-y-1">
-                      {enrichment.signatureTraits.map((trait: string, i: number) => (
-                        <li key={i}>{trait}</li>
-                      ))}
-                    </ul>
+                    <p className="text-sm text-neutral-700">{enrichment.signatureTraits}</p>
                   </div>
                 )}
               </>
