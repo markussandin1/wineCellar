@@ -118,7 +118,7 @@ export function WineEnrichmentModal({ wine, onClose, onSave }: WineEnrichmentMod
         {step === 'input' && (
           <div className="space-y-4">
             <div>
-              <p className="text-sm text-neutral-600 mb-4">
+              <p className="text-sm text-neutral-700 mb-4">
                 Genererar sommelierkvalitet beskrivning för:{' '}
                 <strong>{wine.full_name}</strong>
               </p>
@@ -134,7 +134,7 @@ export function WineEnrichmentModal({ wine, onClose, onSave }: WineEnrichmentMod
                 rows={4}
                 className="mt-2"
               />
-              <p className="text-xs text-neutral-500 mt-2">
+              <p className="text-xs text-neutral-600 mt-2">
                 All extra information du lägger till kommer att användas för att skapa en mer träffsäker beskrivning
               </p>
             </div>

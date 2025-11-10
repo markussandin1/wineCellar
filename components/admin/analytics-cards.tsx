@@ -65,7 +65,7 @@ export function AnalyticsCards({
           >
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-neutral-600">
+                <p className="text-sm font-medium text-neutral-700">
                   {card.title}
                 </p>
                 <p className="text-2xl font-semibold text-neutral-900 mt-2">

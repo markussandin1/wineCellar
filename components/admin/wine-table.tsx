@@ -72,7 +72,7 @@ export function WineDataTable({ wines, onRefresh }: WineDataTableProps) {
             <TableBody>
               {wines.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={10} className="text-center text-neutral-500 py-8">
+                  <TableCell colSpan={10} className="text-center text-neutral-600 py-8">
                     Inga viner hittades
                   </TableCell>
                 </TableRow>
@@ -101,10 +101,10 @@ export function WineDataTable({ wines, onRefresh }: WineDataTableProps) {
                         )}
                       </div>
                     </TableCell>
-                    <TableCell className="text-neutral-600">
+                    <TableCell className="text-neutral-700">
                       {wine.producer_name}
                     </TableCell>
-                    <TableCell className="text-neutral-600">
+                    <TableCell className="text-neutral-700">
                       {wine.vintage || 'NV'}
                     </TableCell>
                     <TableCell>
@@ -112,10 +112,10 @@ export function WineDataTable({ wines, onRefresh }: WineDataTableProps) {
                         {wine.wine_type}
                       </span>
                     </TableCell>
-                    <TableCell className="text-neutral-600 text-sm">
+                    <TableCell className="text-neutral-700 text-sm">
                       <div>{wine.country}</div>
                       {wine.region && (
-                        <div className="text-neutral-400">{wine.region}</div>
+                        <div className="text-neutral-600">{wine.region}</div>
                       )}
                     </TableCell>
                     <TableCell className="text-center">
@@ -131,7 +131,7 @@ export function WineDataTable({ wines, onRefresh }: WineDataTableProps) {
                         className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
                           wine.status === 'active'
                             ? 'bg-green-50 text-green-700'
-                            : 'bg-neutral-100 text-neutral-600'
+                            : 'bg-neutral-100 text-neutral-700'
                         }`}
                       >
                         {wine.status === 'active' ? 'Aktiv' : 'Utkast'}

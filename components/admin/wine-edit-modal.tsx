@@ -198,7 +198,7 @@ export function WineEditModal({ wine, onClose, onSave, onRegenerateEnrichment }:
             )}
             <div>
               <div>Editera vin</div>
-              <div className="text-sm font-normal text-neutral-600 mt-1">
+              <div className="text-sm font-normal text-neutral-700 mt-1">
                 {wine.full_name}
               </div>
             </div>
@@ -574,7 +574,7 @@ export function WineEditModal({ wine, onClose, onSave, onRegenerateEnrichment }:
 
               <div className="space-y-2">
                 {formData.enrichment_food_pairings.length === 0 ? (
-                  <p className="text-sm text-neutral-500 italic">Inga matpar ännu. Klicka "Lägg till" för att lägga till.</p>
+                  <p className="text-sm text-neutral-600 italic">Inga matpar ännu. Klicka "Lägg till" för att lägga till.</p>
                 ) : (
                   formData.enrichment_food_pairings.map((pairing, index) => (
                     <div key={index} className="flex gap-2">
@@ -614,11 +614,11 @@ export function WineEditModal({ wine, onClose, onSave, onRegenerateEnrichment }:
           {/* Metadata (read-only) */}
           {(wine.created_at || wine.updated_at) && (
             <div className="space-y-4 pt-4 border-t border-neutral-200">
-              <h3 className="font-semibold text-sm text-neutral-600">Metadata</h3>
+              <h3 className="font-semibold text-sm text-neutral-700">Metadata</h3>
               <div className="grid grid-cols-2 gap-3 text-sm">
                 {wine.created_at && (
                   <div>
-                    <span className="text-neutral-600">Skapad:</span>{' '}
+                    <span className="text-neutral-700">Skapad:</span>{' '}
                     <span className="text-neutral-900">
                       {new Date(wine.created_at).toLocaleDateString('sv-SE')}
                     </span>
@@ -626,7 +626,7 @@ export function WineEditModal({ wine, onClose, onSave, onRegenerateEnrichment }:
                 )}
                 {wine.updated_at && (
                   <div>
-                    <span className="text-neutral-600">Uppdaterad:</span>{' '}
+                    <span className="text-neutral-700">Uppdaterad:</span>{' '}
                     <span className="text-neutral-900">
                       {new Date(wine.updated_at).toLocaleDateString('sv-SE')}
                     </span>

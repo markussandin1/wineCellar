@@ -38,14 +38,14 @@ export function DataQualitySection({
 
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-sm text-neutral-600">Totalt</span>
+              <span className="text-sm text-neutral-700">Totalt</span>
               <span className="font-medium text-neutral-900">
                 {labelScans.total}
               </span>
             </div>
 
             <div className="flex items-center justify-between">
-              <span className="text-sm text-neutral-600">Lyckade</span>
+              <span className="text-sm text-neutral-700">Lyckade</span>
               <span className="font-medium text-green-600">
                 {labelScans.successful}
               </span>
@@ -87,7 +87,7 @@ export function DataQualitySection({
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="h-4 w-4 text-green-600" />
-                <span className="text-sm text-neutral-600">Med beskrivning</span>
+                <span className="text-sm text-neutral-700">Med beskrivning</span>
               </div>
               <span className="font-medium text-green-600">
                 {enrichment.winesWithEnrichment}
@@ -96,10 +96,10 @@ export function DataQualitySection({
 
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <XCircle className="h-4 w-4 text-neutral-400" />
-                <span className="text-sm text-neutral-600">Utan beskrivning</span>
+                <XCircle className="h-4 w-4 text-neutral-600" />
+                <span className="text-sm text-neutral-700">Utan beskrivning</span>
               </div>
-              <span className="font-medium text-neutral-500">
+              <span className="font-medium text-neutral-700">
                 {enrichment.winesWithoutEnrichment}
               </span>
             </div>
@@ -124,7 +124,7 @@ export function DataQualitySection({
 
               <div className="mt-3 pt-3 border-t border-neutral-200">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-neutral-500">
+                  <span className="text-xs text-neutral-600">
                     Senaste version
                   </span>
                   <span className="text-xs font-mono font-medium text-neutral-700">
