@@ -7,6 +7,20 @@ Build a wine cellar management web application (PWA) that uses AI to make wine t
 
 ## Recent Updates (2025-11-10)
 
+### Environment Variables Fix
+Fixed missing Supabase service role key causing image upload failures.
+
+**Problem:** Label image upload failed with "Missing Supabase environment variables" error.
+
+**Root Cause:** `SUPABASE_SERVICE_ROLE_KEY` was not present in `.env.local` file.
+
+**Solution:**
+- Pulled environment variables from Vercel using `vercel env pull`
+- Service role key now present in `.env.local`
+- Requires dev server restart to load new environment variable
+
+**Note:** After pulling env vars, always restart Next.js dev server: `npm run dev`
+
 ### Wine Enrichment Validation Bug Fix
 Fixed snake_case/camelCase mismatch in enrichment agent validation.
 
