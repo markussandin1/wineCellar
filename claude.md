@@ -55,13 +55,33 @@ text-neutral-400 → 1.7:1 contrast (FAIL)
 | 1.7:1 (neutral-400) | 3.1:1 (neutral-600) | ⚠️ Large text only |
 
 **Files Modified:**
+- `/components/ui/table.tsx:76,102` (TableHead and TableCaption - fixes ALL tables)
 - `/components/admin/wine-edit-modal.tsx:201,577,617,621,629`
 - `/components/admin/wine-table.tsx:75,104,107,115,118,134`
 - `/components/admin/wine-enrichment-modal.tsx:121,137`
 - `/components/admin/data-quality-section.tsx:41,48,90,99,100,102,127`
 - `/components/admin/analytics-cards.tsx:68`
+- `/app/admin/layout.tsx:26,46,53` (navigation links)
+- `/app/admin/wines/page.tsx:117,130,158` (page header and pagination)
+- `/app/admin/analytics/page.tsx:89,109,115,116,78` (page header and stats)
 
 **Specific Changes:**
+
+**CRITICAL FIX - Table Headers (components/ui/table.tsx):**
+- TableHead default: `text-muted-foreground` → `text-neutral-700`
+- TableCaption default: `text-muted-foreground` → `text-neutral-600`
+- **Impact**: Fixed headers in ALL admin tables (wine catalog, popular wines, user matrix)
+- Before: Table headers "Vin", "Producent", "Årgång", etc. were nearly invisible (gray-300, 1.9:1 contrast)
+- After: All table headers clearly readable (4.6:1 contrast)
+
+**Admin Layout (app/admin/layout.tsx):**
+- "Tillbaka till appen" link: `text-neutral-600` → `text-neutral-700`
+- Navigation links (Analys, Vinkatalog): `text-neutral-600` → `text-neutral-700`
+
+**Page Headers:**
+- wines/page.tsx: Subtitle, results summary, pagination: `text-neutral-600` → `text-neutral-700`
+- analytics/page.tsx: Subtitle, status labels, error text: `text-neutral-600` → `text-neutral-700`
+- analytics/page.tsx: Draft count: `text-neutral-400` → `text-neutral-600`
 
 **wine-edit-modal.tsx:**
 - Wine subtitle: `text-neutral-600` → `text-neutral-700`
