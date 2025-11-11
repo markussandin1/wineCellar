@@ -61,6 +61,8 @@ text-neutral-400 → 1.7:1 contrast (FAIL)
 - `/components/admin/wine-enrichment-modal.tsx:121,137`
 - `/components/admin/data-quality-section.tsx:41,48,90,99,100,102,127`
 - `/components/admin/analytics-cards.tsx:68`
+- `/components/admin/popular-wines-chart.tsx:32,43,63,67,70`
+- `/components/admin/user-wine-matrix.tsx:60,85,95,107,115,121`
 - `/app/admin/layout.tsx:26,46,53` (navigation links)
 - `/app/admin/wines/page.tsx:117,130,158` (page header and pagination)
 - `/app/admin/analytics/page.tsx:89,109,115,116,78` (page header and stats)
@@ -99,6 +101,21 @@ text-neutral-400 → 1.7:1 contrast (FAIL)
 - "Utan beskrivning" count: `text-neutral-500` → `text-neutral-700`
 - XCircle icon: `text-neutral-400` → `text-neutral-600`
 - Version label: `text-neutral-500` → `text-neutral-600`
+
+**popular-wines-chart.tsx:**
+- Empty state message: `text-neutral-500` → `text-neutral-600`
+- Subtitle "Viner med flest användare": `text-neutral-600` → `text-neutral-700`
+- Ranking numbers (#1, #2, etc.): `text-neutral-500` → `text-neutral-600`
+- Producer names: `text-neutral-600` → `text-neutral-700`
+- Vintage: `text-neutral-600` → `text-neutral-700`
+
+**user-wine-matrix.tsx:**
+- Search icon: `text-neutral-400` → `text-neutral-600`
+- Empty state: `text-neutral-500` → `text-neutral-600`
+- Email column: `text-neutral-600` → `text-neutral-700`
+- Wine list items: `text-neutral-600` → `text-neutral-700`
+- "Inga flaskor" text: `text-neutral-400` → `text-neutral-600`
+- "+X till" text: `text-neutral-400` → `text-neutral-600`
 
 **Benefits:**
 - ✅ Meets WCAG AA accessibility standard

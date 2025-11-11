@@ -29,7 +29,7 @@ export function PopularWinesChart({ wines }: PopularWinesChartProps) {
         <h2 className="text-lg font-semibold text-neutral-900 mb-4">
           Populärast viner
         </h2>
-        <p className="text-neutral-500 text-center">Ingen data tillgänglig</p>
+        <p className="text-neutral-600 text-center">Ingen data tillgänglig</p>
       </div>
     );
   }
@@ -40,7 +40,7 @@ export function PopularWinesChart({ wines }: PopularWinesChartProps) {
         <h2 className="text-lg font-semibold text-neutral-900">
           Populäraste viner
         </h2>
-        <p className="text-sm text-neutral-600 mt-1">
+        <p className="text-sm text-neutral-700 mt-1">
           Viner med flest användare och flaskor
         </p>
       </div>
@@ -60,14 +60,14 @@ export function PopularWinesChart({ wines }: PopularWinesChartProps) {
           <TableBody>
             {wines.map((wine, index) => (
               <TableRow key={wine.wineId}>
-                <TableCell className="font-medium text-neutral-500">
+                <TableCell className="font-medium text-neutral-600">
                   {index + 1}
                 </TableCell>
                 <TableCell className="font-medium">{wine.wineName}</TableCell>
-                <TableCell className="text-neutral-600">
+                <TableCell className="text-neutral-700">
                   {wine.producer}
                 </TableCell>
-                <TableCell className="text-neutral-600">
+                <TableCell className="text-neutral-700">
                   {wine.vintage || 'NV'}
                 </TableCell>
                 <TableCell className="text-right">

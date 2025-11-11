@@ -57,7 +57,7 @@ export function UserWineMatrix({ data }: UserWineMatrixProps) {
           Användare & Viner
         </h2>
         <div className="relative w-64">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-600" />
           <Input
             placeholder="Sök användare eller vin..."
             value={search}
@@ -82,7 +82,7 @@ export function UserWineMatrix({ data }: UserWineMatrixProps) {
             <TableBody>
               {filteredData.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center text-neutral-500">
+                  <TableCell colSpan={5} className="text-center text-neutral-600">
                     Inga användare hittades
                   </TableCell>
                 </TableRow>
@@ -92,7 +92,7 @@ export function UserWineMatrix({ data }: UserWineMatrixProps) {
                     <TableCell className="font-medium">
                       {user.userName}
                     </TableCell>
-                    <TableCell className="text-neutral-600">
+                    <TableCell className="text-neutral-700">
                       {user.userEmail}
                     </TableCell>
                     <TableCell className="text-right">
@@ -104,7 +104,7 @@ export function UserWineMatrix({ data }: UserWineMatrixProps) {
                     <TableCell>
                       <div className="max-w-md">
                         {user.wines.length === 0 ? (
-                          <span className="text-neutral-400 text-sm">
+                          <span className="text-neutral-600 text-sm">
                             Inga flaskor
                           </span>
                         ) : (
@@ -112,13 +112,13 @@ export function UserWineMatrix({ data }: UserWineMatrixProps) {
                             {user.wines.slice(0, 3).map((wine) => (
                               <div
                                 key={wine.wineId}
-                                className="text-sm text-neutral-600"
+                                className="text-sm text-neutral-700"
                               >
                                 {wine.wineName} ({wine.quantity} st)
                               </div>
                             ))}
                             {user.wines.length > 3 && (
-                              <div className="text-sm text-neutral-400">
+                              <div className="text-sm text-neutral-600">
                                 +{user.wines.length - 3} till
                               </div>
                             )}
