@@ -7,6 +7,176 @@ Build a wine cellar management web application (PWA) that uses AI to make wine t
 
 ## Recent Updates (2025-11-11)
 
+### AI Wine Enrichment Refactoring - Comprehensive Review with Diff Preview
+Complete redesign of wine AI enrichment from separate modal to inline diff preview with selective field updates.
+
+**User Feedback:** "Jag testade att uppdatera ett vin med AI funktionen i admin, men inget uppdaterades, varken vinnamn, druva, sort eller nån annan data. Jag fick heller inte upp vad ai:n hade skapat för info."
+
+**Problem:**
+- User context was lost (API received it but didn't pass to agent)
+- AI only updated enrichment fields, not basic wine data (name, grape, type, etc.)
+- No visual feedback after generating enrichment
+- User never saw what AI suggested before it was saved
+- Sparkles button in wine table overview was confusing (separate from edit flow)
+- Enrichment modal was disconnected from edit modal
+
+**User Requirements:**
+1. AI should suggest improvements to ALL fields (basic data + enrichment)
+2. AI enrichment only accessible from within edit modal (not from wine table)
+3. Show preview with diff view (current vs suggested values)
+4. Checkboxes to select which fields to update (all checked by default)
+5. Apply selected changes to form fields (not saved until user saves the form)
+
+**Solution - Inline Diff Preview with Selective Updates:**
+
+**Architecture:**
+```
+Wine Table → Edit Wine (pencil icon)
+  └─→ Wine Edit Modal
+      └─→ "Granska med AI" button
+          └─→ WineEnrichmentDiff (inline)
+              ├─ Shows current vs suggested values
+              ├─ Checkboxes for each changed field
+              ├─ Diff highlighting (red/green)
+              └─→ "Apply Selected Changes" → Updates form fields
+                  └─→ User can edit further or save
+```
+
+**New Components:**
+
+1. **WineEnrichmentDiff** (`/components/admin/wine-enrichment-diff.tsx`) - NEW
+   - Displays current vs suggested values side-by-side
+   - Checkbox for each field (all changed fields selected by default)
+   - Visual diff: red background with strikethrough (current), green background (suggested)
+   - Grouped sections: Basic Info | Location | Descriptions | Tasting Notes
+   - "Select All" / "Deselect All" buttons
+   - Shows count: "X suggested changes • Y selected"
+   - Apply button updates form fields in WineEditModal
+
+2. **Enhanced Wine Enrichment Agent** (`/lib/ai/agents/wine-enrichment/`)
+   - New type: `WineDataSuggestions` - includes basicData, locationData, enrichmentData
+   - New method: `executeComprehensiveReview()` - returns suggestions for ALL fields
+   - New prompt: `buildComprehensiveReviewPrompt()` - asks AI to review and suggest improvements
+   - AI suggests corrections to: name (capitalization), producer, grape, type, vintage, alcohol, sweetness, body, country, region, sub-region, appellation, plus all enrichment fields
+
+**Updated Components:**
+
+3. **WineEditModal** (`/components/admin/wine-edit-modal.tsx`)
+   - Removed `onRegenerateEnrichment` callback
+   - Added local state for AI suggestions and diff preview
+   - "Regenerera med AI" → "Granska med AI"
+   - Button triggers inline diff preview (not separate modal)
+   - WineEnrichmentDiff shown inline below enrichment section
+   - Apply handler updates form fields with selected changes
+   - User can continue editing or save
+
+4. **WineDataTable** (`/components/admin/wine-table.tsx`)
+   - Removed Sparkles button from wine table overview
+   - Removed `enrichingWine` state
+   - Removed WineEnrichmentModal import and rendering
+   - AI enrichment now only accessible from within edit modal
+
+5. **Enrich Wine API** (`/app/api/admin/enrich-wine/route.ts`)
+   - Now accepts `context` parameter (user's optional notes)
+   - Passes context to enrichment agent as `tastingProfileHints`
+   - Calls `executeComprehensiveReview()` instead of `execute()`
+   - Returns suggestions WITHOUT saving to database
+   - Frontend applies selected changes via PATCH to `/api/admin/wines/[id]`
+
+**User Flow:**
+```
+1. Admin opens wine catalog → Clicks Edit (pencil icon)
+2. Wine Edit Modal opens with all editable fields
+3. Clicks "Granska med AI" button
+4. API generates comprehensive review (3-5 seconds)
+5. WineEnrichmentDiff appears inline showing:
+   - Current values (red, strikethrough)
+   - Suggested values (green, bold)
+   - Checkboxes (all changes pre-selected)
+6. User reviews suggestions:
+   - Unchecks fields they don't want to update
+   - Sees count: "15 suggested changes • 12 selected"
+7. Clicks "Apply 12 Changes"
+8. Form fields update with selected suggestions
+9. User can:
+   - Continue editing manually
+   - Generate another AI review
+   - Save changes to database
+   - Cancel and discard all changes
+```
+
+**Technical Implementation:**
+
+**Wine Enrichment Agent Enhancements:**
+```typescript
+// New type for comprehensive suggestions
+interface WineDataSuggestions {
+  basicData: {
+    name, producerName, wineType, vintage,
+    primaryGrape, alcoholContent, sweetnessLevel, body
+  };
+  locationData: {
+    country, region, subRegion, appellation
+  };
+  enrichmentData: {
+    summary, overview, terroir, winemaking,
+    tastingNotes: { nose, palate, finish },
+    serving, foodPairings, signatureTraits
+  };
+}
+
+// New method
+wineEnrichmentAgent.executeComprehensiveReview(input)
+  → Returns WineDataSuggestions
+
+// New prompt asks AI to:
+- Correct capitalization (e.g., "pinot noir" → "Pinot Noir")
+- Fix formatting (producer names, wine names)
+- Infer missing data (alcohol %, sweetness, body)
+- Suggest appellation based on region/producer
+- Generate enrichment as usual
+```
+
+**Diff Component Logic:**
+```typescript
+// Calculate changed fields
+fieldDiffs = useMemo(() => {
+  compare current vs suggested for each field
+  return { field, label, currentValue, suggestedValue, hasChanged }
+});
+
+// Pre-select all changed fields
+useState(() => new Set(changedFields));
+
+// Apply selected changes
+selectedFields.forEach(field => {
+  updates[field] = suggestions[field]
+});
+setFormData({ ...formData, ...updates });
+```
+
+**Files Modified:**
+- `/lib/ai/agents/wine-enrichment/wine-enrichment.types.ts` - Added WineDataSuggestions
+- `/lib/ai/agents/wine-enrichment/wine-enrichment.config.ts` - Added buildComprehensiveReviewPrompt, increased maxTokens to 1200
+- `/lib/ai/agents/wine-enrichment/wine-enrichment.agent.ts` - Added executeComprehensiveReview() method
+- `/components/admin/wine-enrichment-diff.tsx` - NEW diff component
+- `/components/admin/wine-edit-modal.tsx` - Inline diff preview, removed callback
+- `/components/admin/wine-table.tsx` - Removed sparkles button and enrichment modal
+- `/app/api/admin/enrich-wine/route.ts` - Returns suggestions without saving
+
+**Files Deleted:**
+- `/components/admin/wine-enrichment-modal.tsx` - Replaced by inline diff
+
+**Benefits:**
+- ✅ AI suggests improvements to ALL fields (not just enrichment)
+- ✅ User sees preview before applying changes
+- ✅ Selective field updates with checkboxes
+- ✅ Visual diff makes changes clear (red → green)
+- ✅ Integrated into edit modal workflow
+- ✅ User can edit AI suggestions before saving
+- ✅ No database pollution (suggestions not saved until user confirms)
+- ✅ Clear feedback on what changed and what was applied
+
 ### Admin Interface Contrast Improvements
 Fixed low contrast text throughout admin interface to meet WCAG AA accessibility standards.
 

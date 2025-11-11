@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
     const supabase = await createClient();
 
     const body = await request.json();
-    const { wineId } = body;
+    const { wineId, context } = body;
 
     if (!wineId) {
       return NextResponse.json({ error: 'wineId is required' }, { status: 400 });
@@ -28,10 +28,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Wine not found' }, { status: 404 });
     }
 
-    console.log(`Enriching wine: ${wine.name} by ${wine.producer_name}`);
+    console.log(`Generating comprehensive review for wine: ${wine.name} by ${wine.producer_name}`);
 
-    // Run enrichment
-    const enrichmentResult = await wineEnrichmentAgent.execute({
+    // Run comprehensive review (suggests improvements to ALL fields)
+    const reviewResult = await wineEnrichmentAgent.executeComprehensiveReview({
       name: wine.name,
       producerName: wine.producer_name,
       wineType: wine.wine_type,
@@ -40,60 +40,27 @@ export async function POST(request: NextRequest) {
       region: wine.region,
       subRegion: wine.sub_region,
       primaryGrape: wine.primary_grape,
+      tastingProfileHints: context || null,
     });
 
-    if (!enrichmentResult.success || !enrichmentResult.data) {
-      console.error('Enrichment failed:', enrichmentResult.error);
-      return NextResponse.json({ error: 'Enrichment failed' }, { status: 500 });
+    if (!reviewResult.success || !reviewResult.data) {
+      console.error('Comprehensive review failed:', reviewResult.error);
+      return NextResponse.json({ error: 'AI review failed' }, { status: 500 });
     }
 
-    const enrichmentData = enrichmentResult.data;
-    const aiGeneratedSummary = enrichmentData.summary;
+    console.log('Comprehensive review generated successfully');
 
-    // Generate full_name if missing
-    const fullNameParts = [wine.name];
-    if (wine.producer_name && wine.producer_name !== wine.name) {
-      fullNameParts.push(wine.producer_name);
-    }
-    if (wine.vintage) {
-      fullNameParts.push(String(wine.vintage));
-    }
-    const fullName = fullNameParts.join(' ');
-
-    // Update wine
-    const { data: updatedWine, error: updateError } = await supabase
-      .from('wines')
-      .update({
-        full_name: fullName,
-        enrichment_data: enrichmentData,
-        enrichment_generated_at: new Date().toISOString(),
-        enrichment_version: '2.0.0',
-        ai_generated_summary: aiGeneratedSummary,
-      })
-      .eq('id', wineId)
-      .select('*')
-      .single();
-
-    if (updateError) {
-      console.error('Error updating wine:', updateError);
-      return NextResponse.json({ error: 'Failed to update wine' }, { status: 500 });
-    }
-
-    console.log('Wine enriched successfully:', updatedWine.id);
-
+    // Return suggestions WITHOUT saving to database
+    // Frontend will apply selected changes via PATCH /api/admin/wines/[id]
     return NextResponse.json({
       success: true,
-      wine: {
-        id: updatedWine.id,
-        fullName: updatedWine.full_name,
-        aiGeneratedSummary: updatedWine.ai_generated_summary,
-        enrichmentData: updatedWine.enrichment_data,
-      },
+      suggestions: reviewResult.data,
+      metadata: reviewResult.metadata,
     });
   } catch (error: any) {
     console.error('Enrich wine error:', error);
     return NextResponse.json(
-      { error: error.message || 'Failed to enrich wine' },
+      { error: error.message || 'Failed to generate AI review' },
       { status: 500 }
     );
   }

@@ -19,7 +19,11 @@ import {
   stripCodeFences,
 } from '../base';
 import { wineEnrichmentConfig } from './wine-enrichment.config';
-import type { WineEnrichmentInput, WineEnrichmentOutput } from './wine-enrichment.types';
+import type {
+  WineEnrichmentInput,
+  WineEnrichmentOutput,
+  WineDataSuggestions
+} from './wine-enrichment.types';
 
 export class WineEnrichmentAgent implements Agent<WineEnrichmentInput, WineEnrichmentOutput> {
   name = wineEnrichmentConfig.name;
@@ -197,6 +201,147 @@ export class WineEnrichmentAgent implements Agent<WineEnrichmentInput, WineEnric
           timestamp: new Date(),
         },
       };
+    }
+  }
+
+  /**
+   * Execute comprehensive wine review with field suggestions
+   * Returns suggestions for ALL fields (basic data + enrichment)
+   */
+  async executeComprehensiveReview(
+    input: WineEnrichmentInput
+  ): Promise<AgentResult<WineDataSuggestions>> {
+    const startTime = Date.now();
+
+    try {
+      const client = this.getClient();
+
+      // Build the comprehensive review prompt
+      const userPrompt = wineEnrichmentConfig.buildComprehensiveReviewPrompt(input);
+
+      // Call OpenAI Chat API
+      const response = await client.chat.completions.create({
+        model: wineEnrichmentConfig.model,
+        messages: [
+          {
+            role: 'system',
+            content: wineEnrichmentConfig.systemPrompt,
+          },
+          {
+            role: 'user',
+            content: userPrompt,
+          },
+        ],
+        max_completion_tokens: wineEnrichmentConfig.maxTokens,
+      });
+
+      // Extract response text
+      const rawText = response.choices[0]?.message?.content;
+      if (!rawText) {
+        throw new AgentError('No response from OpenAI', this.name);
+      }
+
+      // Clean and parse JSON
+      const cleanedText = stripCodeFences(rawText);
+      const data = this.parseComprehensiveResponse(cleanedText);
+
+      // Calculate latency
+      const latencyMs = Date.now() - startTime;
+      const tokensUsed = response.usage?.total_tokens || 0;
+
+      // Log performance metrics
+      console.log(
+        `[${this.name}] ✓ Comprehensive Review Success | Model: ${wineEnrichmentConfig.model} | Duration: ${(latencyMs / 1000).toFixed(2)}s | Tokens: ${tokensUsed}`
+      );
+
+      return {
+        success: true,
+        data,
+        confidence: 1.0,
+        metadata: {
+          model: wineEnrichmentConfig.model,
+          tokensUsed,
+          latencyMs,
+          timestamp: new Date(),
+        },
+      };
+    } catch (error) {
+      const latencyMs = Date.now() - startTime;
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+      console.error(
+        `[${this.name}] ✗ Comprehensive Review Error | Model: ${wineEnrichmentConfig.model} | Duration: ${(latencyMs / 1000).toFixed(2)}s | Error: ${errorMessage}`
+      );
+
+      if (error instanceof AgentError) {
+        throw error;
+      }
+
+      return {
+        success: false,
+        error: errorMessage,
+        metadata: {
+          model: wineEnrichmentConfig.model,
+          tokensUsed: 0,
+          latencyMs,
+          timestamp: new Date(),
+        },
+      };
+    }
+  }
+
+  /**
+   * Parse and validate comprehensive review response
+   */
+  private parseComprehensiveResponse(rawResponse: string): WineDataSuggestions {
+    try {
+      const data = JSON.parse(rawResponse);
+
+      // Validate structure
+      if (!data.basicData || typeof data.basicData !== 'object') {
+        throw new Error('Missing or invalid basicData');
+      }
+      if (!data.locationData || typeof data.locationData !== 'object') {
+        throw new Error('Missing or invalid locationData');
+      }
+      if (!data.enrichmentData || typeof data.enrichmentData !== 'object') {
+        throw new Error('Missing or invalid enrichmentData');
+      }
+
+      // Validate enrichment data using existing parser
+      const enrichmentData = this.parseResponse(JSON.stringify(data.enrichmentData));
+
+      return {
+        basicData: {
+          name: data.basicData.name?.trim() || '',
+          producerName: data.basicData.producerName?.trim() || '',
+          wineType: data.basicData.wineType?.trim() || null,
+          vintage: typeof data.basicData.vintage === 'number' ? data.basicData.vintage : null,
+          primaryGrape: data.basicData.primaryGrape?.trim() || null,
+          alcoholContent:
+            typeof data.basicData.alcoholContent === 'number'
+              ? data.basicData.alcoholContent
+              : null,
+          sweetnessLevel: data.basicData.sweetnessLevel?.trim() || null,
+          body: data.basicData.body?.trim() || null,
+        },
+        locationData: {
+          country: data.locationData.country?.trim() || null,
+          region: data.locationData.region?.trim() || null,
+          subRegion: data.locationData.subRegion?.trim() || null,
+          appellation: data.locationData.appellation?.trim() || null,
+        },
+        enrichmentData,
+      };
+    } catch (error) {
+      if (error instanceof SyntaxError) {
+        throw new AgentError(
+          `Failed to parse comprehensive review JSON: ${error.message}`,
+          this.name,
+          error
+        );
+      }
+      throw error;
     }
   }
 }

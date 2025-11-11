@@ -16,6 +16,8 @@ import {
 import { Loader2, Sparkles, Plus, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
+import { WineEnrichmentDiff } from './wine-enrichment-diff';
+import type { WineDataSuggestions } from '@/lib/ai/agents/wine-enrichment/wine-enrichment.types';
 
 interface Wine {
   id: string;
@@ -45,12 +47,14 @@ interface WineEditModalProps {
   wine: Wine;
   onClose: () => void;
   onSave: () => void;
-  onRegenerateEnrichment?: () => void;
 }
 
-export function WineEditModal({ wine, onClose, onSave, onRegenerateEnrichment }: WineEditModalProps) {
+export function WineEditModal({ wine, onClose, onSave }: WineEditModalProps) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [generatingReview, setGeneratingReview] = useState(false);
+  const [aiSuggestions, setAiSuggestions] = useState<WineDataSuggestions | null>(null);
+  const [applyingChanges, setApplyingChanges] = useState(false);
 
   const enrichment = wine.enrichment_data || {};
 
@@ -93,7 +97,7 @@ export function WineEditModal({ wine, onClose, onSave, onRegenerateEnrichment }:
   const removeFoodPairing = (index: number) => {
     setFormData({
       ...formData,
-      enrichment_food_pairings: formData.enrichment_food_pairings.filter((_, i) => i !== index)
+      enrichment_food_pairings: formData.enrichment_food_pairings.filter((_: string, i: number) => i !== index)
     });
   };
 
@@ -120,7 +124,7 @@ export function WineEditModal({ wine, onClose, onSave, onRegenerateEnrichment }:
           finish: formData.enrichment_tasting_notes_finish,
         },
         serving: formData.enrichment_serving,
-        foodPairings: formData.enrichment_food_pairings.filter(p => p.trim() !== ''),
+        foodPairings: formData.enrichment_food_pairings.filter((p: string) => p.trim() !== ''),
         signatureTraits: formData.enrichment_signature_traits,
       };
 
@@ -179,6 +183,141 @@ export function WineEditModal({ wine, onClose, onSave, onRegenerateEnrichment }:
     } finally {
       setLoading(false);
     }
+  }
+
+  async function handleGenerateAIReview() {
+    setGeneratingReview(true);
+    setAiSuggestions(null);
+
+    try {
+      const res = await fetch(`/api/admin/enrich-wine`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          wineId: wine.id,
+          context: '', // Can add context textarea if needed
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error('Failed to generate AI review');
+      }
+
+      const data = await res.json();
+      setAiSuggestions(data.suggestions);
+
+      toast({
+        title: 'AI-granskning klar',
+        description: 'Granska förslagen och välj vilka ändringar du vill tillämpa',
+      });
+    } catch (error) {
+      console.error('AI review error:', error);
+      toast({
+        title: 'Misslyckades',
+        description: 'Kunde inte generera AI-granskning',
+        variant: 'destructive',
+      });
+    } finally {
+      setGeneratingReview(false);
+    }
+  }
+
+  function handleApplyAIChanges(selectedFields: string[]) {
+    if (!aiSuggestions) return;
+
+    setApplyingChanges(true);
+
+    // Apply selected field changes to formData
+    const updates: any = {};
+
+    selectedFields.forEach((field) => {
+      switch (field) {
+        // Basic data
+        case 'name':
+          updates.name = aiSuggestions.basicData.name;
+          break;
+        case 'producer_name':
+          updates.producer_name = aiSuggestions.basicData.producerName;
+          break;
+        case 'wine_type':
+          updates.wine_type = aiSuggestions.basicData.wineType || '';
+          break;
+        case 'vintage':
+          updates.vintage = aiSuggestions.basicData.vintage?.toString() || '';
+          break;
+        case 'primary_grape':
+          updates.primary_grape = aiSuggestions.basicData.primaryGrape || '';
+          break;
+        case 'alcohol_content':
+          updates.alcohol_percentage = aiSuggestions.basicData.alcoholContent?.toString() || '';
+          break;
+        case 'sweetness_level':
+          updates.sweetness_level = aiSuggestions.basicData.sweetnessLevel || '';
+          break;
+        case 'body':
+          updates.body = aiSuggestions.basicData.body || '';
+          break;
+
+        // Location data
+        case 'country':
+          updates.country = aiSuggestions.locationData.country || '';
+          break;
+        case 'region':
+          updates.region = aiSuggestions.locationData.region || '';
+          break;
+        case 'sub_region':
+          updates.sub_region = aiSuggestions.locationData.subRegion || '';
+          break;
+        case 'appellation':
+          updates.appellation = aiSuggestions.locationData.appellation || '';
+          break;
+
+        // Enrichment data
+        case 'ai_generated_summary':
+          updates.ai_generated_summary = aiSuggestions.enrichmentData.summary;
+          break;
+        case 'enrichment_overview':
+          updates.enrichment_overview = aiSuggestions.enrichmentData.overview;
+          break;
+        case 'enrichment_terroir':
+          updates.enrichment_terroir = aiSuggestions.enrichmentData.terroir;
+          break;
+        case 'enrichment_winemaking':
+          updates.enrichment_winemaking = aiSuggestions.enrichmentData.winemaking;
+          break;
+        case 'enrichment_serving':
+          updates.enrichment_serving = aiSuggestions.enrichmentData.serving;
+          break;
+        case 'enrichment_signature_traits':
+          updates.enrichment_signature_traits = aiSuggestions.enrichmentData.signatureTraits;
+          break;
+        case 'enrichment_tasting_notes_nose':
+          updates.enrichment_tasting_notes_nose = aiSuggestions.enrichmentData.tastingNotes.nose;
+          break;
+        case 'enrichment_tasting_notes_palate':
+          updates.enrichment_tasting_notes_palate = aiSuggestions.enrichmentData.tastingNotes.palate;
+          break;
+        case 'enrichment_tasting_notes_finish':
+          updates.enrichment_tasting_notes_finish = aiSuggestions.enrichmentData.tastingNotes.finish;
+          break;
+        case 'enrichment_food_pairings':
+          updates.enrichment_food_pairings = aiSuggestions.enrichmentData.foodPairings;
+          break;
+      }
+    });
+
+    setFormData({ ...formData, ...updates });
+    setAiSuggestions(null);
+    setApplyingChanges(false);
+
+    toast({
+      title: 'Ändringar tillämpade',
+      description: `${selectedFields.length} fält uppdaterade. Glöm inte att spara!`,
+    });
+  }
+
+  function handleCancelAIReview() {
+    setAiSuggestions(null);
   }
 
   return (
@@ -429,19 +568,43 @@ export function WineEditModal({ wine, onClose, onSave, onRegenerateEnrichment }:
           <div className="space-y-4">
             <div className="flex items-center justify-between border-b pb-2">
               <h3 className="font-semibold text-lg">Beskrivningar & Enrichment</h3>
-              {onRegenerateEnrichment && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={onRegenerateEnrichment}
-                  className="gap-2"
-                >
-                  <Sparkles className="h-4 w-4" />
-                  Regenerera med AI
-                </Button>
-              )}
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleGenerateAIReview}
+                disabled={generatingReview || !!aiSuggestions}
+                className="gap-2"
+              >
+                {generatingReview ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Granskar...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="h-4 w-4" />
+                    Granska med AI
+                  </>
+                )}
+              </Button>
             </div>
+
+            {/* AI Suggestions Diff */}
+            {aiSuggestions && (
+              <WineEnrichmentDiff
+                currentWine={{
+                  ...wine,
+                  alcohol_content: wine.alcohol_percentage,
+                  ai_generated_summary: wine.ai_generated_summary ?? null,
+                  enrichment_data: wine.enrichment_data ?? {},
+                }}
+                suggestions={aiSuggestions}
+                onApplyChanges={handleApplyAIChanges}
+                onCancel={handleCancelAIReview}
+                isApplying={applyingChanges}
+              />
+            )}
 
             <div>
               <Label htmlFor="summary">Sammanfattning</Label>
@@ -574,9 +737,9 @@ export function WineEditModal({ wine, onClose, onSave, onRegenerateEnrichment }:
 
               <div className="space-y-2">
                 {formData.enrichment_food_pairings.length === 0 ? (
-                  <p className="text-sm text-neutral-600 italic">Inga matpar ännu. Klicka "Lägg till" för att lägga till.</p>
+                  <p className="text-sm text-neutral-600 italic">Inga matpar ännu. Klicka &quot;Lägg till&quot; för att lägga till.</p>
                 ) : (
-                  formData.enrichment_food_pairings.map((pairing, index) => (
+                  formData.enrichment_food_pairings.map((pairing: string, index: number) => (
                     <div key={index} className="flex gap-2">
                       <Input
                         value={pairing}

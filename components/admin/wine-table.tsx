@@ -11,10 +11,9 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Edit, Trash2, Sparkles, CheckCircle2 } from 'lucide-react';
+import { Edit, Trash2, CheckCircle2 } from 'lucide-react';
 import { WineEditModal } from './wine-edit-modal';
 import { WineDeleteDialog } from './wine-delete-dialog';
-import { WineEnrichmentModal } from './wine-enrichment-modal';
 
 interface Wine {
   id: string;
@@ -48,7 +47,6 @@ interface WineDataTableProps {
 export function WineDataTable({ wines, onRefresh }: WineDataTableProps) {
   const [editingWine, setEditingWine] = useState<Wine | null>(null);
   const [deletingWine, setDeletingWine] = useState<Wine | null>(null);
-  const [enrichingWine, setEnrichingWine] = useState<Wine | null>(null);
 
   return (
     <>
@@ -150,14 +148,6 @@ export function WineDataTable({ wines, onRefresh }: WineDataTableProps) {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => setEnrichingWine(wine)}
-                          title="Generera beskrivning"
-                        >
-                          <Sparkles className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
                           onClick={() => setDeletingWine(wine)}
                           className="text-red-600 hover:text-red-700 hover:bg-red-50"
                           title="Ta bort"
@@ -183,12 +173,6 @@ export function WineDataTable({ wines, onRefresh }: WineDataTableProps) {
             setEditingWine(null);
             onRefresh();
           }}
-          onRegenerateEnrichment={() => {
-            // Save current wine and close edit modal, then open enrichment modal
-            const wineToEnrich = editingWine;
-            setEditingWine(null);
-            setEnrichingWine(wineToEnrich);
-          }}
         />
       )}
 
@@ -198,18 +182,6 @@ export function WineDataTable({ wines, onRefresh }: WineDataTableProps) {
           onClose={() => setDeletingWine(null)}
           onDelete={() => {
             setDeletingWine(null);
-            onRefresh();
-          }}
-        />
-      )}
-
-      {enrichingWine && (
-        <WineEnrichmentModal
-          wine={enrichingWine}
-          onClose={() => setEnrichingWine(null)}
-          onSave={() => {
-            setEnrichingWine(null);
-            // Refresh data to update edit modal if it's open
             onRefresh();
           }}
         />

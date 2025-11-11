@@ -63,3 +63,30 @@ export interface WineEnrichmentOutput {
   /** Inferred region (if agent could determine with high confidence) */
   inferredRegion?: string | null;
 }
+
+/**
+ * Comprehensive wine data suggestions (for admin review)
+ * Includes both basic wine data AND enrichment
+ */
+export interface WineDataSuggestions {
+  /** Basic wine data suggestions */
+  basicData: {
+    name: string;
+    producerName: string;
+    wineType: string | null;
+    vintage: number | null;
+    primaryGrape: string | null;
+    alcoholContent: number | null;
+    sweetnessLevel: string | null;
+    body: string | null;
+  };
+  /** Location data suggestions */
+  locationData: {
+    country: string | null;
+    region: string | null;
+    subRegion: string | null;
+    appellation: string | null;
+  };
+  /** Enrichment data (same as WineEnrichmentOutput) */
+  enrichmentData: WineEnrichmentOutput;
+}

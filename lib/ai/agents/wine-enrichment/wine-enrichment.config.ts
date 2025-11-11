@@ -91,12 +91,62 @@ function buildUserPrompt(input: WineEnrichmentInput): string {
 }
 
 /**
+ * Build comprehensive review prompt that suggests improvements to ALL fields
+ */
+function buildComprehensiveReviewPrompt(input: WineEnrichmentInput): string {
+  const facts = buildFactsSection(input);
+
+  return `Review and improve the following wine data. Suggest corrections/improvements to ALL fields based on your wine knowledge:\n${facts}\n\n` +
+    'Return a JSON object with suggested data for ALL fields:\n' +
+    '{\n' +
+    '  "basicData": {\n' +
+    '    "name": "Corrected/improved wine name (formal style, e.g., \'Pinot Noir\' not \'pinot noir\')",\n' +
+    '    "producerName": "Corrected/improved producer name (proper capitalization and formatting)",\n' +
+    '    "wineType": "Corrected wine type: red, white, rose, sparkling, dessert, or fortified (or null if unknown)",\n' +
+    '    "vintage": Corrected vintage year as number (or null if NV/unknown),\n' +
+    '    "primaryGrape": "Corrected primary grape variety (proper capitalization, e.g., \'Cabernet Sauvignon\')",\n' +
+    '    "alcoholContent": Suggested alcohol % as number (or null if unknown),\n' +
+    '    "sweetnessLevel": "Suggested sweetness: dry, off_dry, medium, sweet, or very_sweet (or null)",\n' +
+    '    "body": "Suggested body: light, medium, or full (or null)"\n' +
+    '  },\n' +
+    '  "locationData": {\n' +
+    '    "country": "Corrected country (or null if uncertain)",\n' +
+    '    "region": "Corrected region (or null if uncertain)",\n' +
+    '    "subRegion": "Corrected sub-region (or null if uncertain)",\n' +
+    '    "appellation": "Suggested official appellation/AOC/AVA/DOC (or null if none)"\n' +
+    '  },\n' +
+    '  "enrichmentData": {\n' +
+    '    "summary": "Two sentences introducing the wine\'s style and character",\n' +
+    '    "overview": "Short description of the producer\'s approach and where this wine sits in the range",\n' +
+    '    "terroir": "Origin, climate, and vineyard factors that shape the wine",\n' +
+    '    "winemaking": "Vinification, maturation, and any signature techniques",\n' +
+    '    "tastingNotes": {\n' +
+    '      "nose": "Aromatic profile with typical scents",\n' +
+    '      "palate": "Flavour profile, texture, and balance",\n' +
+    '      "finish": "Length, structure, and aftertaste"\n' +
+    '    },\n' +
+    '    "serving": "Serving guidance, temperature, decanting, and cellaring window if relevant",\n' +
+    '    "foodPairings": ["Three to four dishes or food styles with brief justification"],\n' +
+    '    "signatureTraits": "What makes the wine distinctive or memorable"\n' +
+    '  }\n' +
+    '}\n\n' +
+    'CRITICAL REQUIREMENTS:\n' +
+    '- Use your wine knowledge to suggest corrections to name, producer, grape variety (proper capitalization, formatting)\n' +
+    '- Infer missing data (alcohol, sweetness, body) based on wine type, grape, and region\n' +
+    '- Correct any misspellings or formatting issues\n' +
+    '- If country/region are missing, use producer name and wine style to infer them\n' +
+    '- Only set fields to null if you truly cannot determine the value\n' +
+    '- Write enrichment in complete sentences, third person, expert tone\n' +
+    '- Do not mention AI, uncertainty, or gaps in data\n';
+}
+
+/**
  * Wine enrichment agent configuration
  */
 const baseConfig = createAgentConfig('wine-enrichment', '2.0.0', {
   model: getModel('WINE_ENRICHMENT_MODEL', 'gpt-4.1-mini'),
   temperature: 0.2,
-  maxTokens: 800,
+  maxTokens: 1200, // Increased for comprehensive review
   timeoutMs: 20000,
 });
 
@@ -110,4 +160,5 @@ export const wineEnrichmentConfig = {
   systemPrompt:
     'You are a seasoned sommelier and wine writer. Write with confident, authoritative tone without referencing AI or speculation. Follow established wine journalism standards and keep the prose sensory, concrete, and useful for wine lovers.',
   buildUserPrompt,
+  buildComprehensiveReviewPrompt,
 };
