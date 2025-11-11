@@ -57,12 +57,12 @@ text-neutral-400 → 1.7:1 contrast (FAIL)
 **Files Modified:**
 - `/components/ui/table.tsx:76,102` (TableHead and TableCaption - fixes ALL tables)
 - `/components/admin/wine-edit-modal.tsx:201,577,617,621,629`
-- `/components/admin/wine-table.tsx:75,104,107,115,118,134`
+- `/components/admin/wine-table.tsx:75,96,104,107,115,118,126,134` (added wine name, bottle count)
 - `/components/admin/wine-enrichment-modal.tsx:121,137`
 - `/components/admin/data-quality-section.tsx:41,48,90,99,100,102,127`
 - `/components/admin/analytics-cards.tsx:68`
-- `/components/admin/popular-wines-chart.tsx:32,43,63,67,70`
-- `/components/admin/user-wine-matrix.tsx:60,85,95,107,115,121`
+- `/components/admin/popular-wines-chart.tsx:32,43,63,66,67,70,78` (added wine name, total bottles)
+- `/components/admin/user-wine-matrix.tsx:60,85,92,95,98,101,107,115,121` (added user name, bottle count, value)
 - `/app/admin/layout.tsx:26,46,53` (navigation links)
 - `/app/admin/wines/page.tsx:117,130,158` (page header and pagination)
 - `/app/admin/analytics/page.tsx:89,109,115,116,78` (page header and stats)
@@ -112,10 +112,21 @@ text-neutral-400 → 1.7:1 contrast (FAIL)
 **user-wine-matrix.tsx:**
 - Search icon: `text-neutral-400` → `text-neutral-600`
 - Empty state: `text-neutral-500` → `text-neutral-600`
+- User names: `font-medium` → `font-medium text-neutral-900` (primary data)
 - Email column: `text-neutral-600` → `text-neutral-700`
+- Bottle count: `text-right` → `text-right text-neutral-900` (primary data)
+- Total value: `font-medium` → `font-medium text-neutral-900` (primary data)
 - Wine list items: `text-neutral-600` → `text-neutral-700`
 - "Inga flaskor" text: `text-neutral-400` → `text-neutral-600`
 - "+X till" text: `text-neutral-400` → `text-neutral-600`
+
+**CRITICAL FIX - Primary Data Visibility:**
+- Wine names (wine-table.tsx): `font-medium` → `font-medium text-neutral-900`
+- Wine names (popular-wines-chart.tsx): `font-medium` → `font-medium text-neutral-900`
+- User names (user-wine-matrix.tsx): `font-medium` → `font-medium text-neutral-900`
+- Bottle counts: `font-medium` → `font-medium text-neutral-900`
+- Total bottles/values: Added `text-neutral-900` for maximum contrast
+- **Impact**: Fixed nearly invisible primary data that was inheriting default text color
 
 **Benefits:**
 - ✅ Meets WCAG AA accessibility standard

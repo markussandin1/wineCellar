@@ -89,16 +89,16 @@ export function UserWineMatrix({ data }: UserWineMatrixProps) {
               ) : (
                 filteredData.map((user) => (
                   <TableRow key={user.userId}>
-                    <TableCell className="font-medium">
+                    <TableCell className="font-medium text-neutral-900">
                       {user.userName}
                     </TableCell>
                     <TableCell className="text-neutral-700">
                       {user.userEmail}
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-right text-neutral-900">
                       {user.totalBottles}
                     </TableCell>
-                    <TableCell className="text-right font-medium">
+                    <TableCell className="text-right font-medium text-neutral-900">
                       {formatCurrency(user.totalValue)}
                     </TableCell>
                     <TableCell>

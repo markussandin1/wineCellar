@@ -63,7 +63,7 @@ export function PopularWinesChart({ wines }: PopularWinesChartProps) {
                 <TableCell className="font-medium text-neutral-600">
                   {index + 1}
                 </TableCell>
-                <TableCell className="font-medium">{wine.wineName}</TableCell>
+                <TableCell className="font-medium text-neutral-900">{wine.wineName}</TableCell>
                 <TableCell className="text-neutral-700">
                   {wine.producer}
                 </TableCell>
@@ -75,7 +75,7 @@ export function PopularWinesChart({ wines }: PopularWinesChartProps) {
                     {wine.userCount}
                   </span>
                 </TableCell>
-                <TableCell className="text-right font-medium">
+                <TableCell className="text-right font-medium text-neutral-900">
                   {wine.totalBottles}
                 </TableCell>
               </TableRow>

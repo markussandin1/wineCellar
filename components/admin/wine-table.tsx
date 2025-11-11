@@ -93,7 +93,7 @@ export function WineDataTable({ wines, onRefresh }: WineDataTableProps) {
                         <div className="w-10 h-12 rounded bg-neutral-100" />
                       )}
                     </TableCell>
-                    <TableCell className="font-medium">
+                    <TableCell className="font-medium text-neutral-900">
                       <div className="flex items-center gap-2">
                         {wine.full_name}
                         {wine.verified && (
@@ -123,7 +123,7 @@ export function WineDataTable({ wines, onRefresh }: WineDataTableProps) {
                         {wine.userCount}
                       </span>
                     </TableCell>
-                    <TableCell className="text-center font-medium">
+                    <TableCell className="text-center font-medium text-neutral-900">
                       {wine.bottleCount}
                     </TableCell>
                     <TableCell>
