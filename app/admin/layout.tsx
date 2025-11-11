@@ -23,7 +23,7 @@ export default async function AdminLayout({
             <div className="flex items-center gap-6">
               <Link
                 href="/dashboard"
-                className="flex items-center gap-2 text-sm text-neutral-600 hover:text-neutral-900 transition-colors"
+                className="flex items-center gap-2 text-sm text-neutral-700 hover:text-neutral-900 transition-colors"
               >
                 <ArrowLeft className="h-4 w-4" />
                 Tillbaka till appen
@@ -43,14 +43,14 @@ export default async function AdminLayout({
           <nav className="flex gap-1">
             <Link
               href="/admin/analytics"
-              className="flex items-center gap-2 px-4 py-3 text-sm font-medium text-neutral-600 hover:text-neutral-900 hover:bg-neutral-50 border-b-2 border-transparent hover:border-neutral-300 transition-colors"
+              className="flex items-center gap-2 px-4 py-3 text-sm font-medium text-neutral-700 hover:text-neutral-900 hover:bg-neutral-50 border-b-2 border-transparent hover:border-neutral-300 transition-colors"
             >
               <BarChart3 className="h-4 w-4" />
               Analys
             </Link>
             <Link
               href="/admin/wines"
-              className="flex items-center gap-2 px-4 py-3 text-sm font-medium text-neutral-600 hover:text-neutral-900 hover:bg-neutral-50 border-b-2 border-transparent hover:border-neutral-300 transition-colors"
+              className="flex items-center gap-2 px-4 py-3 text-sm font-medium text-neutral-700 hover:text-neutral-900 hover:bg-neutral-50 border-b-2 border-transparent hover:border-neutral-300 transition-colors"
             >
               <Wine className="h-4 w-4" />
               Vinkatalog

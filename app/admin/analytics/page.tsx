@@ -75,7 +75,7 @@ export default function AnalyticsPage() {
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
           <p className="text-red-600 font-semibold mb-2">Failed to load analytics</p>
-          <p className="text-neutral-600 text-sm">{error}</p>
+          <p className="text-neutral-700 text-sm">{error}</p>
         </div>
       </div>
     );
@@ -86,7 +86,7 @@ export default function AnalyticsPage() {
       {/* Page Header */}
       <div>
         <h1 className="text-2xl font-bold text-neutral-900">Analys</h1>
-        <p className="text-neutral-600 mt-1">
+        <p className="text-neutral-700 mt-1">
           Systemövergripande statistik och insikter
         </p>
       </div>
@@ -106,14 +106,14 @@ export default function AnalyticsPage() {
         </h2>
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <p className="text-sm text-neutral-600">Aktiva</p>
+            <p className="text-sm text-neutral-700">Aktiva</p>
             <p className="text-2xl font-semibold text-green-600 mt-1">
               {data.overview.winesByStatus.active}
             </p>
           </div>
           <div>
-            <p className="text-sm text-neutral-600">Utkast</p>
-            <p className="text-2xl font-semibold text-neutral-400 mt-1">
+            <p className="text-sm text-neutral-700">Utkast</p>
+            <p className="text-2xl font-semibold text-neutral-600 mt-1">
               {data.overview.winesByStatus.draft}
             </p>
           </div>

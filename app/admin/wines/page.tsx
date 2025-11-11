@@ -114,7 +114,7 @@ export default function WinesCatalogPage() {
       {/* Page Header */}
       <div>
         <h1 className="text-2xl font-bold text-neutral-900">Vinkatalog</h1>
-        <p className="text-neutral-600 mt-1">
+        <p className="text-neutral-700 mt-1">
           Hantera och editera viner i katalogen
         </p>
       </div>
@@ -127,7 +127,7 @@ export default function WinesCatalogPage() {
 
       {/* Results Summary */}
       <div className="flex items-center justify-between">
-        <p className="text-sm text-neutral-600">
+        <p className="text-sm text-neutral-700">
           Visar {wines.length} av {pagination.total} viner
         </p>
       </div>
@@ -155,7 +155,7 @@ export default function WinesCatalogPage() {
               >
                 Föregående
               </button>
-              <span className="text-sm text-neutral-600">
+              <span className="text-sm text-neutral-700">
                 Sida {pagination.page} av {pagination.totalPages}
               </span>
               <button
