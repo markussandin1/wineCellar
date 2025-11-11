@@ -324,24 +324,46 @@ export function WineEditModal({ wine, onClose, onSave }: WineEditModalProps) {
     <Dialog open onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-3">
-            {wine.primary_label_image_url && (
-              <div className="relative w-12 h-16 rounded overflow-hidden bg-neutral-100 flex-shrink-0">
-                <Image
-                  src={wine.primary_label_image_url}
-                  alt={wine.full_name}
-                  fill
-                  className="object-cover"
-                />
+          <div className="flex items-start justify-between gap-4">
+            <DialogTitle className="flex items-center gap-3">
+              {wine.primary_label_image_url && (
+                <div className="relative w-12 h-16 rounded overflow-hidden bg-neutral-100 flex-shrink-0">
+                  <Image
+                    src={wine.primary_label_image_url}
+                    alt={wine.full_name}
+                    fill
+                    className="object-cover"
+                  />
+                </div>
+              )}
+              <div>
+                <div>Editera vin</div>
+                <div className="text-sm font-normal text-neutral-700 mt-1">
+                  {wine.full_name}
+                </div>
               </div>
-            )}
-            <div>
-              <div>Editera vin</div>
-              <div className="text-sm font-normal text-neutral-700 mt-1">
-                {wine.full_name}
-              </div>
-            </div>
-          </DialogTitle>
+            </DialogTitle>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleGenerateAIReview}
+              disabled={generatingReview || !!aiSuggestions}
+              className="gap-2 flex-shrink-0"
+            >
+              {generatingReview ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Granskar...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="h-4 w-4" />
+                  Granska med AI
+                </>
+              )}
+            </Button>
+          </div>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -566,29 +588,7 @@ export function WineEditModal({ wine, onClose, onSave }: WineEditModalProps) {
 
           {/* Descriptions & Enrichment */}
           <div className="space-y-4">
-            <div className="flex items-center justify-between border-b pb-2">
-              <h3 className="font-semibold text-lg">Beskrivningar & Enrichment</h3>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={handleGenerateAIReview}
-                disabled={generatingReview || !!aiSuggestions}
-                className="gap-2"
-              >
-                {generatingReview ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Granskar...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="h-4 w-4" />
-                    Granska med AI
-                  </>
-                )}
-              </Button>
-            </div>
+            <h3 className="font-semibold text-lg border-b pb-2">Beskrivningar & Enrichment</h3>
 
             {/* AI Suggestions Diff */}
             {aiSuggestions && (

@@ -92,12 +92,15 @@ export function WineDataTable({ wines, onRefresh }: WineDataTableProps) {
                       )}
                     </TableCell>
                     <TableCell className="font-medium text-neutral-900">
-                      <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setEditingWine(wine)}
+                        className="flex items-center gap-2 hover:text-purple-700 transition-colors text-left"
+                      >
                         {wine.full_name}
                         {wine.verified && (
                           <CheckCircle2 className="h-4 w-4 text-green-600" />
                         )}
-                      </div>
+                      </button>
                     </TableCell>
                     <TableCell className="text-neutral-700">
                       {wine.producer_name}
