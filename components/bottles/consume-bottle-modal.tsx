@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { consumeBottle } from '@/app/actions/bottle';
+import { consumeBottle } from '@/lib/api/client';
 import { X } from 'lucide-react';
 
 type Bottle = {
@@ -29,7 +29,6 @@ export function ConsumeBottleModal({
     const formData = new FormData(e.currentTarget);
 
     const data = {
-      bottleId: bottle.id,
       consumedDate: formData.get('consumedDate') as string,
       rating: formData.get('rating') ? Number(formData.get('rating')) : undefined,
       tastingNotes: formData.get('tastingNotes') as string || undefined,
@@ -40,7 +39,7 @@ export function ConsumeBottleModal({
     };
 
     try {
-      await consumeBottle(data);
+      await consumeBottle(bottle.id, data);
       router.refresh();
       onClose();
     } catch (err: any) {

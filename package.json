@@ -8,9 +8,16 @@
     "start": "next start",
     "lint": "next lint",
     "test:label-scan": "tsx scripts/test-label-scan-agent.ts",
-    "test:wine-enrichment": "tsx scripts/test-wine-enrichment-agent.ts"
+    "test:wine-enrichment": "tsx scripts/test-wine-enrichment-agent.ts",
+    "capacitor:build": "node scripts/capacitor-build.js",
+    "capacitor:sync": "npm run capacitor:build && npx cap sync",
+    "ios:open": "npx cap open ios"
   },
   "dependencies": {
+    "@capacitor/camera": "^7.0.2",
+    "@capacitor/cli": "^7.4.4",
+    "@capacitor/core": "^7.4.4",
+    "@capacitor/ios": "^7.4.4",
     "@ducanh2912/next-pwa": "^10.2.9",
     "@hookform/resolvers": "^3.9.0",
     "@radix-ui/react-alert-dialog": "^1.1.15",

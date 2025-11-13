@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { updateBottle } from '@/app/actions/bottle';
+import { updateBottle } from '@/lib/api/client';
 import { X, Upload, Trash2 } from 'lucide-react';
 
 type Bottle = {
@@ -108,7 +108,6 @@ export function EditBottleModal({
       }
 
       const data = {
-        id: bottle.id,
         bottleSize: formData.get('bottleSize') ? Number(formData.get('bottleSize')) : undefined,
         quantity: formData.get('quantity') ? Number(formData.get('quantity')) : undefined,
         purchasePrice: formData.get('purchasePrice') ? Number(formData.get('purchasePrice')) : undefined,
@@ -122,7 +121,7 @@ export function EditBottleModal({
         status: (formData.get('status') as string) || undefined,
       };
 
-      await updateBottle(data);
+      await updateBottle(bottle.id, data);
       router.refresh();
       onClose();
     } catch (err: any) {

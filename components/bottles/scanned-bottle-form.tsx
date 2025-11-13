@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { FormProvider } from 'react-hook-form';
 
-import { createBottleFromScan } from '@/app/actions/bottle';
+import { createBottleFromScan } from '@/lib/api/client';
 import type { WineEnrichmentOutput } from '@/lib/ai/agents/wine-enrichment/wine-enrichment.types';
 
 import { useBottleForm } from './form/useBottleForm';

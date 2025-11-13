@@ -389,3 +389,482 @@ To add a new agent (e.g., "vintage-quality"):
 3. **Timeouts**: Fail fast if agent takes >10s
 4. **Fallbacks**: If enrichment fails, save basic wine data
 5. **Monitoring**: Track token usage and costs per agent
+
+---
+
+# Capacitor Architecture Guidelines (iOS/Android Native Apps)
+
+**Added:** 2025-11-11
+**Applies to:** iOS and Android native app development using Capacitor
+
+## File Organization for AI Agents
+
+### Three-Layer Architecture
+
+Wine Cellar uses a strict three-layer separation:
+
+```
+wine-cellar/
+├── src/          # 🌐 WEB ONLY - Vercel deploys
+├── capacitor/    # 📱 APP ONLY - Requires app store release
+└── shared/       # 🔄 SHARED - Both web and app
+```
+
+**Critical Rules:**
+1. **`shared/` is dependency-free** - Only imports from npm packages, never from `src/` or `capacitor/`
+2. **`src/` imports only from** `shared/` + npm packages
+3. **`capacitor/` imports only from** `shared/` + npm packages + Capacitor plugins
+4. **NEVER** import `capacitor/` from `src/` or vice versa
+
+### File Size Limits (AI-Friendly)
+
+**Golden Rules:**
+- **Ideal:** 50-100 lines per file
+- **Maximum:** 150 lines per file
+- **Above 150 lines:** MUST split into multiple files
+
+**How to Split Large Files:**
+
+```
+❌ BAD: BottleManagement.tsx (847 lines)
+
+✅ GOOD: Split into 6 files:
+  - BottleList.tsx (90 lines) - Display logic
+  - BottleForm.tsx (120 lines) - Form logic
+  - useBottles.ts (60 lines) - Data fetching hook
+  - bottle.types.ts (40 lines) - TypeScript types
+  - bottle.utils.ts (80 lines) - Helper functions
+  - bottle.constants.ts (30 lines) - Constants
+```
+
+**Why This Matters:**
+- AI agents can understand complete file in one context window
+- Easier code review and debugging
+- Clear single responsibility per file
+- Faster to test and modify
+
+## Naming Conventions
+
+### File Naming Patterns
+
+Use suffixes to indicate platform specificity:
+
+| Suffix | Platform | Example |
+|--------|----------|---------|
+| `.native.ts` | App only (iOS/Android) | `camera.native.ts` |
+| `.web.ts` | Web only | `camera.web.ts` |
+| `.shared.ts` | Both platforms | `format.shared.ts` |
+| `.types.ts` | TypeScript definitions | `wine.types.ts` |
+| `.config.ts` | Configuration | `agent.config.ts` |
+| `.test.ts` | Tests | `wine.test.ts` |
+
+**Examples:**
+```
+capacitor/services/
+├── camera.native.ts          # Native camera implementation
+└── notification.native.ts    # Native notifications
+
+src/services/
+├── camera.web.ts             # WebRTC camera implementation
+└── storage.web.ts            # Web localStorage
+
+shared/services/
+├── types.ts                  # Service interfaces (platform-agnostic)
+├── factory.ts                # Creates correct platform implementation
+└── format.shared.ts          # Pure formatting functions
+```
+
+## Import Rules & Boundary Enforcement
+
+### Allowed Import Patterns
+
+**✅ ALLOWED:**
+
+```typescript
+// shared/ files - ONLY npm packages
+import { Capacitor } from '@capacitor/core';
+import dayjs from 'dayjs';
+
+// src/ files - shared + npm
+import { Platform } from '@/shared/platform';
+import { Wine } from '@/shared/types/wine';
+import { formatPrice } from '@/shared/utils/format';
+
+// capacitor/ files - shared + npm + Capacitor
+import { Camera } from '@capacitor/camera';
+import { Features } from '@/shared/features';
+import type { CameraService } from '@/shared/services/types';
+```
+
+**❌ FORBIDDEN:**
+
+```typescript
+// src/ importing from capacitor/
+import { NativeCamera } from '@/capacitor/components/CameraCapture'; // ❌
+
+// capacitor/ importing from src/
+import { WebCamera } from '@/src/components/WebCamera'; // ❌
+
+// shared/ importing from src/ or capacitor/
+import { someUtil } from '@/src/lib/utils'; // ❌
+import { NativeService } from '@/capacitor/services/camera'; // ❌
+```
+
+### Platform Detection Pattern
+
+**Always use Platform utility for conditional code:**
+
+```typescript
+// ✅ CORRECT: Use Platform detection
+import { Platform } from '@/shared/platform';
+
+export function MyComponent() {
+  if (Platform.isNative) {
+    return <NativeCamera />;
+  }
+  return <WebCamera />;
+}
+
+// ❌ WRONG: Direct platform checks scattered everywhere
+if (typeof window !== 'undefined' && window.Capacitor) { ... }
+```
+
+## Release Impact Awareness
+
+### When Code Changes Require App Store Release
+
+**CRITICAL:** AI agents must understand what requires app release vs web deploy.
+
+**Requires App Store Release (1-3 days):**
+- ❌ New Capacitor plugin installation
+- ❌ Changes to `ios/` or `android/` folders
+- ❌ New native permissions (`Info.plist`, `AndroidManifest.xml`)
+- ❌ App icons, splash screens
+- ❌ Native plugin configuration changes
+
+**Web Deploy Only (~5 minutes):**
+- ✅ Changes to `src/` components
+- ✅ API routes in `src/app/api/`
+- ✅ Styling (Tailwind CSS)
+- ✅ New pages in `src/app/`
+- ✅ Backend logic changes
+
+**Release Impact Comment Pattern:**
+
+```typescript
+// 📱 RELEASE IMPACT: App release required
+// Reason: Adding camera permission for first time
+// File: ios/App/App/Info.plist
+// Estimated timeline: 1-3 days for App Store review
+
+export async function initializeCamera() {
+  const { Camera } = await import('@capacitor/camera');
+  return Camera.requestPermissions();
+}
+```
+
+```typescript
+// 🌐 RELEASE IMPACT: Web deploy only
+// File: src/components/bottles/WineCard.tsx
+// Estimated timeline: ~5 minutes
+
+export function WineCard({ wine }: Props) {
+  return <div className="wine-card">...</div>;
+}
+```
+
+### Pre-Commit Checklist for AI Agents
+
+Before committing, AI agents should verify:
+
+**File Organization:**
+- [ ] No files exceed 150 lines
+- [ ] Correct folder placement (`src/`, `capacitor/`, or `shared/`)
+- [ ] Naming convention followed (`.native.ts`, `.web.ts`, etc.)
+
+**Import Boundaries:**
+- [ ] No `src/` → `capacitor/` imports
+- [ ] No `capacitor/` → `src/` imports
+- [ ] No `shared/` → `src/` or `capacitor/` imports
+- [ ] Platform detection via `@/shared/platform` only
+
+**Release Impact:**
+- [ ] Documented if change requires app release
+- [ ] Backward compatibility maintained for API changes
+- [ ] Feature flags used for gradual rollout when applicable
+
+**Code Quality:**
+- [ ] Single responsibility per file
+- [ ] TypeScript types defined in `.types.ts` files
+- [ ] Platform-specific code isolated to correct layer
+
+## Code Patterns for AI Agents
+
+### Pattern 1: Service Interface
+
+**Always use this pattern for platform-specific logic:**
+
+```typescript
+// Step 1: Define interface in shared/services/types.ts (40 lines)
+export interface CameraService {
+  capture(): Promise<Blob>;
+  hasPermission(): Promise<boolean>;
+}
+
+// Step 2: Native implementation in capacitor/services/camera.native.ts (60 lines)
+export class NativeCameraService implements CameraService {
+  async capture(): Promise<Blob> { ... }
+  async hasPermission(): Promise<boolean> { ... }
+}
+
+// Step 3: Web implementation in src/services/camera.web.ts (80 lines)
+export class WebCameraService implements CameraService {
+  async capture(): Promise<Blob> { ... }
+  async hasPermission(): Promise<boolean> { ... }
+}
+
+// Step 4: Factory in shared/services/factory.ts (40 lines)
+export function createCameraService(): CameraService {
+  return Platform.isNative
+    ? new NativeCameraService()
+    : new WebCameraService();
+}
+```
+
+**Why:** Type-safe, testable, platform-agnostic consuming code.
+
+### Pattern 2: Conditional Component Rendering
+
+```typescript
+// src/components/LabelScanner.tsx (100 lines max)
+import { Platform } from '@/shared/platform';
+import dynamic from 'next/dynamic';
+
+const NativeCamera = dynamic(
+  () => import('@/capacitor/components/CameraCapture'),
+  { ssr: false }
+);
+
+const WebCamera = dynamic(
+  () => import('./WebCamera'),
+  { ssr: false }
+);
+
+export function LabelScanner() {
+  return Platform.isNative ? <NativeCamera /> : <WebCamera />;
+}
+```
+
+### Pattern 3: Feature Flags
+
+```typescript
+// shared/features.ts (40 lines)
+import { Platform } from './platform';
+
+export const Features = {
+  PUSH_NOTIFICATIONS: Platform.isNative,
+  BATCH_SCANNING: process.env.NEXT_PUBLIC_FEATURE_BATCH === 'true',
+  FACE_ID: Platform.isIOS,
+};
+
+// Usage in components
+import { Features } from '@/shared/features';
+
+{Features.PUSH_NOTIFICATIONS && <NotificationPrompt />}
+```
+
+## Documentation Requirements
+
+### When to Update Living Docs
+
+AI agents must update these documents:
+
+**After implementing new feature:**
+1. Add entry to `docs/CAPACITOR_ARCHITECTURE.md` → Changelog section
+2. If app release required: Update `docs/RELEASE_STRATEGY.md` → Release History
+
+**Example changelog entry:**
+
+```markdown
+### 2025-11-15 - Camera Implementation
+
+**Files Added:**
+- `capacitor/plugins/camera.ts` (70 lines)
+- `capacitor/components/CameraCapture.tsx` (90 lines)
+- `capacitor/hooks/useNativeCamera.ts` (60 lines)
+
+**Files Modified:**
+- `src/components/bottles/LabelScanner.tsx` - Added platform detection
+
+**Release Impact:**
+- 📱 App release required
+- Reason: Camera permissions in Info.plist
+- Timeline: 1-3 days
+
+**Testing:**
+- ✅ Tested on iPhone 14 Pro (iOS 17)
+- ✅ Tested camera permissions flow
+- ✅ Tested image upload to Supabase
+```
+
+### Code Comments for Complex Logic
+
+Use this format for complex platform-specific code:
+
+```typescript
+/**
+ * Platform-agnostic camera capture
+ *
+ * @platform Web - Uses WebRTC MediaDevices API
+ * @platform iOS - Uses @capacitor/camera plugin
+ * @platform Android - Uses @capacitor/camera plugin
+ *
+ * @returns Blob of captured image (JPEG, quality: 90%)
+ * @throws CameraPermissionError if permission denied
+ *
+ * @example
+ * const cameraService = createCameraService();
+ * const imageBlob = await cameraService.capture();
+ */
+export async function captureLabel(): Promise<Blob> {
+  const service = createCameraService();
+  return service.capture();
+}
+```
+
+## Testing Guidelines for AI Agents
+
+### Unit Tests
+
+**Test platform-specific implementations separately:**
+
+```typescript
+// camera.native.test.ts
+import { NativeCameraService } from './camera.native';
+
+describe('NativeCameraService', () => {
+  it('should capture image via Capacitor plugin', async () => {
+    // Mock Capacitor Camera
+    const service = new NativeCameraService();
+    const blob = await service.capture();
+    expect(blob).toBeInstanceOf(Blob);
+  });
+});
+
+// camera.web.test.ts
+import { WebCameraService } from './camera.web';
+
+describe('WebCameraService', () => {
+  it('should capture image via WebRTC', async () => {
+    // Mock navigator.mediaDevices
+    const service = new WebCameraService();
+    const blob = await service.capture();
+    expect(blob).toBeInstanceOf(Blob);
+  });
+});
+```
+
+### Integration Tests
+
+**Test platform detection and factory:**
+
+```typescript
+// camera.integration.test.ts
+import { createCameraService } from '@/shared/services/factory';
+import { Platform } from '@/shared/platform';
+
+describe('Camera Service Integration', () => {
+  it('should create correct service based on platform', () => {
+    const service = createCameraService();
+
+    if (Platform.isNative) {
+      expect(service).toBeInstanceOf(NativeCameraService);
+    } else {
+      expect(service).toBeInstanceOf(WebCameraService);
+    }
+  });
+});
+```
+
+## Common Mistakes to Avoid
+
+### ❌ Mistake 1: Large Monolithic Files
+
+```typescript
+// ❌ BAD: BottleManagement.tsx (847 lines)
+export function BottleManagement() {
+  // 200 lines of state management
+  // 150 lines of API calls
+  // 300 lines of form logic
+  // 197 lines of UI rendering
+}
+```
+
+**Fix:** Split into focused files (<150 lines each)
+
+### ❌ Mistake 2: Direct Platform Checks
+
+```typescript
+// ❌ BAD: Scattered platform detection
+if (typeof window !== 'undefined' && window.Capacitor) {
+  // Native logic
+}
+
+// ✅ GOOD: Use Platform utility
+import { Platform } from '@/shared/platform';
+if (Platform.isNative) {
+  // Native logic
+}
+```
+
+### ❌ Mistake 3: Breaking Import Boundaries
+
+```typescript
+// ❌ BAD: Web importing from app
+import { NativeCamera } from '@/capacitor/components/CameraCapture';
+
+// ✅ GOOD: Use shared interface + factory
+import { createCameraService } from '@/shared/services/factory';
+const camera = createCameraService(); // Returns correct implementation
+```
+
+### ❌ Mistake 4: Not Documenting Release Impact
+
+```typescript
+// ❌ BAD: No indication this requires app release
+export async function requestNotifications() {
+  await PushNotifications.requestPermissions();
+}
+
+// ✅ GOOD: Clear release impact documented
+/**
+ * Request push notification permissions
+ *
+ * 📱 RELEASE IMPACT: App release required
+ * Reason: Push notification permissions in Info.plist
+ * First-time setup only
+ */
+export async function requestNotifications() {
+  await PushNotifications.requestPermissions();
+}
+```
+
+## Summary for AI Agents
+
+**Remember these rules:**
+
+1. **File size:** Max 150 lines, ideal 50-100
+2. **Three layers:** `src/` (web), `capacitor/` (app), `shared/` (both)
+3. **Import boundaries:** Never cross between web ↔ app
+4. **Platform detection:** Always use `@/shared/platform`
+5. **Release awareness:** Document if change requires app release
+6. **Naming:** Use `.native.ts`, `.web.ts`, `.shared.ts` suffixes
+7. **Service pattern:** Interface in shared, implementations in src/capacitor
+8. **Living docs:** Update `CAPACITOR_ARCHITECTURE.md` after features
+
+**Before committing, ask:**
+- [ ] Are files under 150 lines?
+- [ ] Are imports following boundaries?
+- [ ] Is platform detection correct?
+- [ ] Is release impact documented?
+- [ ] Are living docs updated?

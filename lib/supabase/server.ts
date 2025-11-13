@@ -1,8 +1,9 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 
 export async function createClient() {
   const cookieStore = await cookies();
+  const headerStore = await headers();
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -12,6 +13,9 @@ export async function createClient() {
       'Missing Supabase environment variables. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in your .env file.'
     );
   }
+
+  // Check for Authorization header (used by native apps)
+  const authHeader = headerStore.get('authorization');
 
   return createServerClient(
     supabaseUrl,
@@ -33,6 +37,12 @@ export async function createClient() {
           }
         },
       },
+      // Pass Authorization header if present (for native app auth)
+      global: authHeader ? {
+        headers: {
+          Authorization: authHeader,
+        },
+      } : undefined,
     }
   );
 }

@@ -1,10 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { Wine, Home, LogOut, Settings, ShieldCheck } from 'lucide-react';
-import { logout } from '@/app/actions/auth';
+import { logout } from '@/lib/api/client';
 import { playfair } from '@/lib/design-system/fonts';
 
 const navItems = [
@@ -31,6 +31,17 @@ interface NavProps {
 
 export function Nav({ isAdmin = false }: NavProps) {
   const pathname = usePathname();
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      router.push('/');
+      router.refresh();
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+  };
 
   return (
     <nav className="border-b border-amber-900/20 bg-gradient-to-r from-[#1A1410] to-[#0A0A0A] backdrop-blur-sm">
@@ -94,15 +105,13 @@ export function Nav({ isAdmin = false }: NavProps) {
 
           {/* Logout Button */}
           <div className="flex items-center gap-4">
-            <form action={logout}>
-              <button
-                type="submit"
-                className="text-sm font-medium text-gray-300 hover:text-amber-400 transition-colors cursor-pointer"
-                aria-label="Log out"
-              >
-                <LogOut className="h-4 w-4" />
-              </button>
-            </form>
+            <button
+              onClick={handleLogout}
+              className="text-sm font-medium text-gray-300 hover:text-amber-400 transition-colors cursor-pointer"
+              aria-label="Log out"
+            >
+              <LogOut className="h-4 w-4" />
+            </button>
           </div>
         </div>
 

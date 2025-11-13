@@ -4,6 +4,10 @@ import { uploadLabelImage } from '@/lib/supabase';
 import { labelScanAgent } from '@/lib/ai/agents/label-scan';
 import { wineEnrichmentAgent } from '@/lib/ai/agents/wine-enrichment';
 
+// API routes are dynamic - cannot be statically exported
+export const dynamic = "force-dynamic";
+
+
 // Helper function to normalize text for comparison
 function normalize(text: string): string {
   if (!text) return '';

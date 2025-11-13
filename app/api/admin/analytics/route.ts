@@ -2,6 +2,11 @@ import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth/admin';
 import { createClient } from '@/lib/supabase/server';
 
+// API routes are dynamic - cannot be statically exported
+export const dynamic = "force-dynamic";
+
+
+
 export async function GET() {
   try {
     // Verify admin access

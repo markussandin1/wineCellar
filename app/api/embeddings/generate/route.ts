@@ -3,6 +3,10 @@ import { createClient } from '@/lib/supabase/server';
 import { generateWineEmbedding, hasValidEnrichmentForEmbedding } from '@/lib/ai/embeddings';
 import type { WineEnrichmentOutput } from '@/lib/ai/agents/wine-enrichment';
 
+// API routes are dynamic - cannot be statically exported
+export const dynamic = "force-dynamic";
+
+
 /**
  * POST /api/embeddings/generate
  *

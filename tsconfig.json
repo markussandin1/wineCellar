@@ -24,6 +24,12 @@
     "paths": {
       "@/*": [
         "./*"
+      ],
+      "@/shared/*": [
+        "./shared/*"
+      ],
+      "@/capacitor/*": [
+        "./capacitor/*"
       ]
     },
     "target": "ES2017"
@@ -35,6 +41,10 @@
     ".next/types/**/*.ts"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "app/_api_backup",
+    "app/_actions_backup",
+    "app/_bottle_backup",
+    "**/*.bak"
   ]
 }

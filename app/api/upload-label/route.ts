@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { uploadLabelImage } from '@/lib/supabase';
 
+// API routes are dynamic - cannot be statically exported
+export const dynamic = "force-dynamic";
+
+
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient();

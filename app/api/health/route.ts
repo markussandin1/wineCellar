@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
+// API routes are dynamic - cannot be statically exported
+export const dynamic = "force-dynamic";
+
+
 export async function GET() {
   try {
     // Create Supabase client

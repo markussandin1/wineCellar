@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { updateUserProfile, updatePassword, deleteAccount } from '@/app/actions/settings';
+import { updateUserProfile, updatePassword, deleteAccount } from '@/lib/api/client';
 import { useRouter } from 'next/navigation';
 
 interface SettingsContentProps {

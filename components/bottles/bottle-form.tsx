@@ -6,7 +6,7 @@ import Image from 'next/image';
 import { Controller, FormProvider } from 'react-hook-form';
 import { Upload, X, Check } from 'lucide-react';
 
-import { createBottle } from '@/app/actions/bottle';
+import { createBottle } from '@/lib/api/client';
 import { Autocomplete } from '@/components/ui/autocomplete';
 
 import { useBottleForm } from './form/useBottleForm';

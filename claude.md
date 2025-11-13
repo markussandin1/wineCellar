@@ -1,9 +1,262 @@
 Wine Cellar - Development Instructions for Claude Code
 Project Overview
-Build a wine cellar management web application (PWA) that uses AI to make wine tracking effortless.
+Build a wine cellar management web application (PWA) and iOS app that uses AI to make wine tracking effortless.
 
 - AI can never be mention in the app, ai is just a tool not a feature.
 - Always update the claude.md file before each commit
+
+## Recent Updates (2025-11-13)
+
+### iOS Camera Permissions Fix
+Fixed app crash when accessing camera in iOS app.
+
+**Problem:**
+- App crashed immediately when trying to access camera
+- Error: "This app has crashed because it attempted to access privacy-sensitive data without a usage description"
+- Missing required NSCameraUsageDescription key in Info.plist
+
+**Solution - Added Privacy Permission Descriptions:**
+
+**Files Modified:**
+- `/ios/App/App/Info.plist` - Added three required permission descriptions
+
+**Permissions Added:**
+```xml
+<key>NSCameraUsageDescription</key>
+<string>Take photos of wine labels to automatically identify and add wines to your cellar</string>
+
+<key>NSPhotoLibraryAddUsageDescription</key>
+<string>Save wine label photos to your photo library</string>
+
+<key>NSPhotoLibraryUsageDescription</key>
+<string>Select existing wine label photos from your library to add wines to your cellar</string>
+```
+
+**Why These Are Required:**
+- **NSCameraUsageDescription**: Required by Apple for any app accessing the device camera
+- **NSPhotoLibraryAddUsageDescription**: Required for saving photos to the user's photo library
+- **NSPhotoLibraryUsageDescription**: Required for selecting existing photos from the library
+- These descriptions are shown to users when the app first requests permission
+
+**User Experience:**
+- First time user taps camera button → iOS shows permission dialog with description
+- User grants/denies permission
+- If granted → camera opens normally
+- If denied → app should show helpful message to enable in Settings
+
+**Testing After Fix:**
+1. Clean build folder in Xcode (Product → Clean Build Folder)
+2. Rebuild and run app
+3. Tap camera/scan label button
+4. Should see permission prompt (not crash)
+5. Grant permission and verify camera works
+
+**Benefits:**
+- ✅ App no longer crashes on camera access
+- ✅ Compliant with Apple App Store requirements
+- ✅ User-friendly permission descriptions
+- ✅ Ready for label scanning feature
+
+### iOS Native App Authentication Fix
+Fixed authentication issue preventing iOS app from loading dashboard and making API calls.
+
+**Problem:**
+- iOS simulator showed "Failed to load dashboard" error
+- API calls to `/api/dashboard/stats` returned 401 Unauthorized
+- Root cause: Supabase auth cookies not sent with fetch requests from native apps
+
+**Solution - Authorization Header Authentication:**
+
+**API Client Updates (`/lib/api/client.ts`):**
+- Added `getAuthHeaders()` function that retrieves Supabase session from client storage
+- Extracts `access_token` from session and includes it in `Authorization: Bearer {token}` header
+- Updated `apiCall()` to include auth headers in all API requests
+- Updated `apiUpload()` to include auth headers for file uploads
+- Added `credentials: 'include'` for cookie-based auth on web
+
+**Server-Side Supabase Client (`/lib/supabase/server.ts`):**
+- Updated `createClient()` to accept Authorization header in addition to cookies
+- Reads `authorization` header from request using Next.js `headers()` API
+- Passes header to Supabase client via `global.headers.Authorization` option
+- Maintains backward compatibility with cookie-based auth for web
+
+**Authentication Flow:**
+```
+iOS App:
+1. User logs in → Supabase stores session in localStorage
+2. App makes API call → getAuthHeaders() retrieves session
+3. Includes Authorization: Bearer {token} in request
+4. Server reads header → createClient() passes to Supabase
+5. Supabase validates token → Returns user data
+6. API route processes authenticated request
+
+Web App (unchanged):
+1. User logs in → Supabase stores session in cookies
+2. App makes API call → credentials: 'include' sends cookies
+3. Server reads cookies → createClient() validates session
+4. API route processes authenticated request
+```
+
+**Benefits:**
+- ✅ iOS native app can authenticate with API routes
+- ✅ Web app continues using cookie-based auth (optimal)
+- ✅ Single codebase supports both platforms
+- ✅ No changes required to API routes
+- ✅ Works with existing Supabase SSR library
+
+**Files Modified:**
+- `/lib/api/client.ts` - Added auth header support
+- `/lib/supabase/server.ts` - Added Authorization header reading
+
+**Testing Results:**
+- ✅ Build passes successfully
+- ✅ Linting passes with no errors
+- ✅ Dev server starts on port 3002
+- ✅ API health check: `{"status":"ok","database":"connected"}`
+- ✅ Ready for iOS simulator testing
+
+**Next Steps:**
+- Test in iOS simulator to verify dashboard loads
+- Test other authenticated routes (cellar, bottle details, etc.)
+- Test label scanning and image upload with auth headers
+
+## Recent Updates (2025-11-12)
+
+### Hybrid Architecture - API Routes + Server Actions
+Implemented correct architecture pattern for Capacitor compatibility while maintaining optimal performance.
+
+**Problem Identified:**
+- Initial attempt: Converting all Server Actions to API routes
+- Issue: Server Components calling API routes via HTTP loses auth context (401 errors)
+- Root cause: Cookies don't forward on server-side fetch calls
+
+**Solution - Hybrid Architecture (Industry Standard):**
+
+**Server Components (SSR) → Server Actions (Direct Database Access)**
+- `app/dashboard/page.tsx` → `getDashboardStats()` from `app/actions/dashboard.ts`
+- `app/settings/page.tsx` → `getUserProfile()` from `app/actions/settings.ts`
+- `app/cellar/page.tsx` → `getBottles()` from `app/actions/bottle.ts`
+- `app/bottle/[id]/page.tsx` → `getBottle()` from `app/actions/bottle.ts`
+- **Why**: No HTTP overhead, auth context preserved, faster rendering
+
+**Client Components → API Routes (HTTP)**
+- `components/bottles/bottle-form.tsx` → `POST /api/bottles`
+- `components/bottles/scanned-bottle-form.tsx` → `POST /api/bottles/from-scan`
+- `components/bottles/bottle-detail.tsx` → `DELETE /api/bottles/[id]`
+- `components/bottles/edit-bottle-modal.tsx` → `PATCH /api/bottles/[id]`
+- `components/bottles/consume-bottle-modal.tsx` → `POST /api/bottles/[id]/consume`
+- `components/layout/nav.tsx` → `POST /api/auth/logout`
+- `app/settings/SettingsContent.tsx` → `PATCH /api/user/profile`, `PATCH /api/user/password`, `DELETE /api/user/account`
+- **Why**: Works from browser, enables native app support
+
+**Native Apps → API Routes (HTTPS to Vercel)**
+- iOS/Android → `https://wine-cellar.vercel.app/api/*`
+- **Why**: Cross-platform compatibility, single codebase
+
+**API Client Implementation (`/lib/api/client.ts`):**
+- Platform-aware URL construction (lazy evaluation to avoid webpack issues)
+- Browser (client-side): Relative URLs (`/api/*`)
+- Server (SSR): Absolute URLs (`http://localhost:3000/api/*` or `https://vercel-url/api/*`)
+- Native: Production URLs (`https://wine-cellar.vercel.app/api/*`)
+
+**API Routes Created (14 endpoints):**
+- `POST /api/bottles` - Create bottle
+- `GET /api/bottles` - List bottles (for API consumers)
+- `GET /api/bottles/[id]` - Get bottle details
+- `PATCH /api/bottles/[id]` - Update bottle
+- `DELETE /api/bottles/[id]` - Delete bottle
+- `POST /api/bottles/from-scan` - Create from label scan
+- `POST /api/bottles/[id]/consume` - Record consumption
+- `POST /api/auth/logout` - Logout user
+- `GET /api/dashboard/stats` - Dashboard statistics (for API consumers)
+- `GET /api/user/profile` - Get user profile
+- `PATCH /api/user/profile` - Update profile
+- `PATCH /api/user/password` - Change password
+- `DELETE /api/user/account` - Delete account
+
+**Key Fixes:**
+1. **Lazy URL computation**: Moved `getApiBaseUrl()` from module-level constant to function call to avoid webpack bundling errors
+2. **Server-side absolute URLs**: Detect `typeof window === 'undefined'` and use absolute URLs for Node.js fetch
+3. **Tailwind config ESM**: Converted `require("tailwindcss-animate")` to `import` statement
+
+**Files Modified:**
+- `/lib/api/client.ts` - Platform-aware API wrapper with lazy URL computation
+- `/tailwind.config.ts` - Fixed ESM import for tailwindcss-animate
+- All client components - Updated to use API client
+- All server components - Reverted to use Server Actions
+
+**Testing Results:**
+- ✅ Build passes (27 pages)
+- ✅ Linting passes (no errors)
+- ✅ TypeScript compilation passes
+- ✅ Dev server works on port 3000
+- ✅ API health check: `{"status":"ok","database":"connected"}`
+- ✅ Homepage loads: HTTP 200 OK
+- ✅ No authentication errors
+- ✅ No webpack bundling errors
+
+**Architecture Benefits:**
+- Optimal performance (no HTTP overhead for SSR)
+- Capacitor-ready (APIs work from native apps)
+- Single codebase (web + native)
+- User-friendly (standard REST API pattern)
+
+**Next Steps:**
+- Phase 7: iOS camera implementation (when ready for native testing)
+- Phase 8: Update architecture documentation
+
+## Recent Updates (2025-11-11)
+
+### Capacitor Setup & Web App Testing
+Complete Capacitor architecture setup and verification that existing web app works correctly.
+
+**Testing Summary:**
+- ✅ Environment variables configured
+- ✅ Linting passes with no errors
+- ✅ TypeScript compilation successful
+- ✅ Regular build completes (27 pages generated)
+- ✅ Dev server starts correctly
+- ✅ Homepage loads
+- ✅ Auth pages (login/register) load
+- ✅ API health check works
+- ✅ API auth protection works (401 for protected routes)
+- ✅ All core features functional
+
+**Capacitor Configuration:**
+- Created `/capacitor.config.ts` with app configuration
+- Updated `/next.config.js` with conditional static export for Capacitor builds
+- Added TypeScript path aliases: `@/shared`, `@/capacitor`
+- Created `/shared/platform.ts` for platform detection
+- Created `/shared/features.ts` for feature flags
+
+**API Routes Configuration:**
+All API routes now have `export const dynamic = "force-dynamic"` directive to indicate they:
+- Run server-side only (cannot be statically exported)
+- Will be called via HTTPS from native apps (pointing to Vercel deployment)
+- Are excluded from Capacitor static builds
+
+**Important Discovery - Capacitor Build Strategy:**
+
+Next.js static export (`output: 'export'`) **fundamentally cannot** include API routes. This is by design.
+
+**Solution (per architecture docs):**
+1. **Web deployment:** Regular Next.js build → Vercel (includes API routes)
+2. **Native app deployment:**
+   - Native app will call Vercel-deployed APIs via HTTPS
+   - Static export build will be used when implementing first native feature (camera)
+   - Until then, web app works normally without changes
+
+**Files Modified:**
+- `/next.config.js` - Added Capacitor conditional config
+- `/capacitor.config.ts` - NEW - Capacitor configuration
+- `/shared/platform.ts` - NEW - Platform detection utility
+- `/shared/features.ts` - NEW - Feature flags
+- All `/app/api/**/route.ts` files - Added `dynamic = "force-dynamic"` directive
+
+**Next Steps:**
+- iOS/Android native projects will be created with `npx cap add ios/android` when implementing camera feature
+- Until then, continue developing web features normally
+- Capacitor structure is ready for native development
 
 ## Recent Updates (2025-11-11)
 
@@ -177,283 +430,6 @@ setFormData({ ...formData, ...updates });
 - ✅ No database pollution (suggestions not saved until user confirms)
 - ✅ Clear feedback on what changed and what was applied
 
-### Admin Interface Contrast Improvements
-Fixed low contrast text throughout admin interface to meet WCAG AA accessibility standards.
-
-**User Feedback:** "kolla design systemet och uppdatera designen, vissa texter i admin går knappt att läsa då det är ljus text mot ljus bakgrund"
-
-**Problem:**
-- Design system is built for dark backgrounds (wine cellar aesthetic)
-- Admin panel uses light backgrounds (white/neutral)
-- Gray text colors (neutral-400, neutral-500, neutral-600) had insufficient contrast
-- Text was difficult to read, especially for users with visual impairments
-- Did not meet WCAG AA standard (4.5:1 contrast ratio for normal text)
-
-**Root Cause Analysis:**
-```typescript
-// Design system colors.ts - optimized for DARK backgrounds
-backgrounds: {
-  deepBlack: '#0A0A0A',      // Main background
-  cellarBrown: '#1A1410',    // Cards
-}
-
-text: {
-  primary: '#F3F4F6',        // gray-100 - for dark backgrounds
-  secondary: '#E5E7EB',      // gray-200
-  muted: '#9CA3AF',          // gray-400
-}
-
-// Admin components - using LIGHT backgrounds
-bg-white, bg-neutral-50, bg-neutral-100
-text-neutral-600 → 2.9:1 contrast (FAIL)
-text-neutral-500 → 2.3:1 contrast (FAIL)
-text-neutral-400 → 1.7:1 contrast (FAIL)
-```
-
-**Solution:** Updated text colors for light backgrounds
-
-**Color Mapping (for white/light backgrounds):**
-- `text-neutral-600` → `text-neutral-700` (normal text labels)
-- `text-neutral-500` → `text-neutral-600/700` (secondary text)
-- `text-neutral-400` → `text-neutral-600` (icons and tertiary elements)
-
-**Contrast Results:**
-| Before | After | Standard |
-|--------|-------|----------|
-| 2.9:1 (neutral-600) | 4.6:1 (neutral-700) | ✅ WCAG AA (4.5:1) |
-| 2.3:1 (neutral-500) | 4.6:1 (neutral-700) | ✅ WCAG AA |
-| 1.7:1 (neutral-400) | 3.1:1 (neutral-600) | ⚠️ Large text only |
-
-**Files Modified:**
-- `/components/ui/table.tsx:76,102` (TableHead and TableCaption - fixes ALL tables)
-- `/components/admin/wine-edit-modal.tsx:201,577,617,621,629`
-- `/components/admin/wine-table.tsx:75,96,104,107,115,118,126,134` (added wine name, bottle count)
-- `/components/admin/wine-enrichment-modal.tsx:121,137`
-- `/components/admin/data-quality-section.tsx:41,48,90,99,100,102,127`
-- `/components/admin/analytics-cards.tsx:68`
-- `/components/admin/popular-wines-chart.tsx:32,43,63,66,67,70,78` (added wine name, total bottles)
-- `/components/admin/user-wine-matrix.tsx:60,85,92,95,98,101,107,115,121` (added user name, bottle count, value)
-- `/app/admin/layout.tsx:26,46,53` (navigation links)
-- `/app/admin/wines/page.tsx:117,130,158` (page header and pagination)
-- `/app/admin/analytics/page.tsx:89,109,115,116,78` (page header and stats)
-
-**Specific Changes:**
-
-**CRITICAL FIX - Table Headers (components/ui/table.tsx):**
-- TableHead default: `text-muted-foreground` → `text-neutral-700`
-- TableCaption default: `text-muted-foreground` → `text-neutral-600`
-- **Impact**: Fixed headers in ALL admin tables (wine catalog, popular wines, user matrix)
-- Before: Table headers "Vin", "Producent", "Årgång", etc. were nearly invisible (gray-300, 1.9:1 contrast)
-- After: All table headers clearly readable (4.6:1 contrast)
-
-**Admin Layout (app/admin/layout.tsx):**
-- "Tillbaka till appen" link: `text-neutral-600` → `text-neutral-700`
-- Navigation links (Analys, Vinkatalog): `text-neutral-600` → `text-neutral-700`
-
-**Page Headers:**
-- wines/page.tsx: Subtitle, results summary, pagination: `text-neutral-600` → `text-neutral-700`
-- analytics/page.tsx: Subtitle, status labels, error text: `text-neutral-600` → `text-neutral-700`
-- analytics/page.tsx: Draft count: `text-neutral-400` → `text-neutral-600`
-
-**wine-edit-modal.tsx:**
-- Wine subtitle: `text-neutral-600` → `text-neutral-700`
-- Empty food pairings state: `text-neutral-500` → `text-neutral-600`
-- Metadata section: all labels `text-neutral-600` → `text-neutral-700`
-
-**wine-table.tsx:**
-- Producer, vintage, country: `text-neutral-600` → `text-neutral-700`
-- Region (secondary): `text-neutral-400` → `text-neutral-600`
-- Empty state: `text-neutral-500` → `text-neutral-600`
-- Draft status badge: `text-neutral-600` → `text-neutral-700`
-
-**data-quality-section.tsx:**
-- All stat labels: `text-neutral-600` → `text-neutral-700`
-- "Utan beskrivning" count: `text-neutral-500` → `text-neutral-700`
-- XCircle icon: `text-neutral-400` → `text-neutral-600`
-- Version label: `text-neutral-500` → `text-neutral-600`
-
-**popular-wines-chart.tsx:**
-- Empty state message: `text-neutral-500` → `text-neutral-600`
-- Subtitle "Viner med flest användare": `text-neutral-600` → `text-neutral-700`
-- Ranking numbers (#1, #2, etc.): `text-neutral-500` → `text-neutral-600`
-- Producer names: `text-neutral-600` → `text-neutral-700`
-- Vintage: `text-neutral-600` → `text-neutral-700`
-
-**user-wine-matrix.tsx:**
-- Search icon: `text-neutral-400` → `text-neutral-600`
-- Empty state: `text-neutral-500` → `text-neutral-600`
-- User names: `font-medium` → `font-medium text-neutral-900` (primary data)
-- Email column: `text-neutral-600` → `text-neutral-700`
-- Bottle count: `text-right` → `text-right text-neutral-900` (primary data)
-- Total value: `font-medium` → `font-medium text-neutral-900` (primary data)
-- Wine list items: `text-neutral-600` → `text-neutral-700`
-- "Inga flaskor" text: `text-neutral-400` → `text-neutral-600`
-- "+X till" text: `text-neutral-400` → `text-neutral-600`
-
-**CRITICAL FIX - Primary Data Visibility:**
-- Wine names (wine-table.tsx): `font-medium` → `font-medium text-neutral-900`
-- Wine names (popular-wines-chart.tsx): `font-medium` → `font-medium text-neutral-900`
-- User names (user-wine-matrix.tsx): `font-medium` → `font-medium text-neutral-900`
-- Bottle counts: `font-medium` → `font-medium text-neutral-900`
-- Total bottles/values: Added `text-neutral-900` for maximum contrast
-- **Impact**: Fixed nearly invisible primary data that was inheriting default text color
-
-**Benefits:**
-- ✅ Meets WCAG AA accessibility standard
-- ✅ Improved readability for all users
-- ✅ Better UX for users with visual impairments
-- ✅ Consistent text hierarchy throughout admin interface
-
-## Recent Updates (2025-11-10)
-
-### Wine Edit Modal Refactoring - Single Form with Editable Enrichment
-Complete redesign of wine edit modal from tabbed interface to single scrollable form with all fields editable.
-
-**User Request:** "Varför har vi delat upp det i grundläggande info och enrichment? Beskrivning och enrichment går inte att editera."
-
-**Problem:**
-- Tab structure separated basic info from enrichment unnecessarily
-- Enrichment fields (descriptions, tasting notes, food pairings) were read-only
-- Users couldn't edit AI-generated text directly
-- Confusing UX with two separate views
-
-**Solution:** Unified single-form interface
-1. **Removed tabs** - Replaced "Grundläggande info" / "Beskrivning & Enrichment" tabs with single scrollable form
-2. **Made ALL enrichment editable** - Converted all read-only displays to editable textareas
-3. **Array input for food pairings** - Add/remove buttons for managing food pairing list
-4. **Integrated AI regeneration** - "Regenerera med AI" button in enrichment section
-5. **Fixed enrichment save bug** - WineEnrichmentModal was using wrong field names
-
-**Architecture Changes:**
-
-**Before (Tabbed Interface):**
-- Tab 1: Editable basic fields only
-- Tab 2: Read-only enrichment display
-- Separate sparkle button to regenerate enrichment
-- Bug: Enrichment modal saved to non-existent columns
-
-**After (Single Form):**
-```
-Form Sections (all in one scrollable view):
-├── Grundläggande information (name, producer, vintage, type, grape, alcohol)
-├── Plats (country, region, sub_region, appellation)
-├── Egenskaper (sweetness_level, body)
-├── Status (status, verified)
-├── Beskrivningar & Enrichment [Regenerera med AI button]
-│   ├── Sammanfattning (ai_generated_summary) - textarea
-│   ├── Översikt (overview) - textarea
-│   ├── Terroir (terroir) - textarea
-│   └── Vinframställning (winemaking) - textarea
-├── Provningsanteckningar
-│   ├── Doft (nose) - textarea
-│   ├── Smak (palate) - textarea
-│   └── Eftersmak (finish) - textarea
-├── Servering & Matpar
-│   ├── Servering (serving) - textarea
-│   ├── Matpar (foodPairings) - array inputs with add/remove
-│   └── Signatur egenskaper (signatureTraits) - textarea
-└── Metadata (created_at, updated_at) - read-only
-```
-
-**User Flow:**
-1. Click Edit (pencil icon) → Single form with all fields visible
-2. Directly edit ANY field (basic data OR enrichment text)
-3. Click "Regenerera med AI" → Opens enrichment modal overlay
-4. Generate → Preview → Save → Returns to wine list
-5. Open edit modal again to see refreshed enrichment values
-
-**Technical Implementation:**
-
-**formData state** now includes all enrichment fields:
-```typescript
-{
-  // Basic fields
-  name, producer_name, vintage, wine_type, etc.
-  // Enrichment fields (NEW - now editable)
-  ai_generated_summary,
-  enrichment_overview,
-  enrichment_terroir,
-  enrichment_winemaking,
-  enrichment_tasting_notes_nose,
-  enrichment_tasting_notes_palate,
-  enrichment_tasting_notes_finish,
-  enrichment_serving,
-  enrichment_food_pairings: string[], // array input
-  enrichment_signature_traits
-}
-```
-
-**handleSubmit** builds enrichment_data JSONB correctly:
-```typescript
-const enrichmentData = {
-  summary: formData.ai_generated_summary,
-  overview: formData.enrichment_overview,
-  terroir: formData.enrichment_terroir,
-  winemaking: formData.enrichment_winemaking,
-  tastingNotes: {
-    nose: formData.enrichment_tasting_notes_nose,
-    palate: formData.enrichment_tasting_notes_palate,
-    finish: formData.enrichment_tasting_notes_finish,
-  },
-  serving: formData.enrichment_serving,
-  foodPairings: formData.enrichment_food_pairings,
-  signatureTraits: formData.enrichment_signature_traits,
-};
-
-// Send to API
-updates.enrichment_data = enrichmentData;
-updates.ai_generated_summary = formData.ai_generated_summary;
-```
-
-**Bug Fixed in WineEnrichmentModal:**
-```typescript
-// ❌ BEFORE (wrong - individual non-existent columns):
-{
-  enrichment_overview: enrichment.overview,
-  enrichment_terroir: enrichment.terroir,
-  // ... etc (these columns don't exist)
-}
-
-// ✅ AFTER (correct - JSONB field):
-{
-  ai_generated_summary: enrichment.summary,
-  enrichment_data: enrichment, // Full JSONB object
-  enrichment_version: timestamp,
-  enrichment_generated_at: timestamp,
-}
-```
-
-**Files Modified:**
-- `/components/admin/wine-edit-modal.tsx` (complete rewrite - 660 lines)
-- `/components/admin/wine-enrichment-modal.tsx:71-84` (fix save bug)
-- `/components/admin/wine-table.tsx:186-191` (add regeneration callback)
-
-**Benefits:**
-- ✅ All fields accessible in one view (no tab switching)
-- ✅ Direct editing of enrichment text (no need to regenerate if you just want to tweak)
-- ✅ AI regeneration still available via button
-- ✅ Enrichment save now works correctly
-- ✅ Better UX for admin wine management
-
-### Wine Edit Modal Type Error Fix
-Fixed runtime TypeError when viewing wine enrichment data in admin panel.
-
-**Problem:** `enrichment.signatureTraits.map is not a function` error when opening wine edit modal.
-
-**Root Cause:** Type mismatch between enrichment data structure and display code:
-- `signatureTraits` is defined as `string` in `/lib/ai/agents/wine-enrichment/wine-enrichment.types.ts:60`
-- Admin modal was treating it as `string[]` and calling `.map()` on it
-
-**Solution:**
-- Display `signatureTraits` as text paragraph instead of mapped list
-- Added `Array.isArray()` safety check for `foodPairings` to prevent similar errors
-- Ensures type-safe rendering of enrichment data
-
-**Files Modified:**
-- `/components/admin/wine-edit-modal.tsx:488,499-503` (type-safe enrichment display)
-
-### Admin Interface Implementation
-Implemented comprehensive admin panel for wine catalog management and system analytics.
 
 **Features Implemented:**
 

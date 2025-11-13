@@ -5,7 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { Trash2, Edit, ArrowLeft, GlassWater } from 'lucide-react';
-import { deleteBottle } from '@/app/actions/bottle';
+import { deleteBottle } from '@/lib/api/client';
 import { ConsumeBottleModal } from './consume-bottle-modal';
 import { EditBottleModal } from './edit-bottle-modal';
 import { WineTypeIcon, playfair } from '@/lib/design-system';

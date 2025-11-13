@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { wineEnrichmentAgent } from '@/lib/ai/agents/wine-enrichment';
 
+// API routes are dynamic - cannot be statically exported
+export const dynamic = "force-dynamic";
+
+
 /**
  * POST /api/scan-label/enrich
  * Generates wine enrichment data with optional user context

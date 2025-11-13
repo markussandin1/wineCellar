@@ -3,6 +3,10 @@ import { createClient } from '@/lib/supabase/server';
 import { requireAdmin } from '@/lib/auth/admin';
 import { wineEnrichmentAgent } from '@/lib/ai/agents/wine-enrichment';
 
+// API routes are dynamic - cannot be statically exported
+export const dynamic = "force-dynamic";
+
+
 export async function POST(request: NextRequest) {
   try {
     // Verify admin access

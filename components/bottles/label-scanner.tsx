@@ -4,7 +4,18 @@ import { useState, useRef } from 'react';
 import { Camera, Upload, Loader2, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import dynamic from 'next/dynamic';
+import { Platform } from '@/shared/platform';
 import { ScannedBottleForm } from './scanned-bottle-form';
+
+// Dynamically import native camera component (only loaded on native platforms)
+const CameraCapture = dynamic(
+  () => import('@/capacitor/components/CameraCapture').then((mod) => ({ default: mod.CameraCapture })),
+  {
+    ssr: false,
+    loading: () => <div className="p-4 text-center">Loading camera...</div>,
+  }
+);
 
 type ScanStep = 'upload' | 'processing' | 'review';
 
@@ -62,6 +73,15 @@ export function LabelScanner({ initialPlacement, userCurrency }: LabelScannerPro
       setImagePreview(reader.result as string);
     };
     reader.readAsDataURL(file);
+  };
+
+  // Handle native camera capture (Capacitor)
+  const handleNativeCapture = async (imageBlob: Blob) => {
+    // Convert Blob to File for consistency with web flow
+    const file = new File([imageBlob], `label-${Date.now()}.jpg`, {
+      type: 'image/jpeg',
+    });
+    handleFileSelect(file);
   };
 
   const handleScan = async () => {
@@ -139,56 +159,71 @@ export function LabelScanner({ initialPlacement, userCurrency }: LabelScannerPro
               Take a clear photo of the wine label. Make sure the text is readable.
             </p>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Camera Button */}
-              <button
-                type="button"
-                onClick={() => cameraInputRef.current?.click()}
-                className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-border p-8 transition-colors hover:border-primary hover:bg-accent"
-              >
-                <Camera className="h-12 w-12 text-muted-foreground mb-3" />
+            {/* Native camera (iOS/Android) */}
+            {Platform.isNative ? (
+              <CameraCapture
+                onCapture={handleNativeCapture}
+                buttonText="Scan Wine Label"
+                variant="default"
+                size="lg"
+              />
+            ) : (
+              /* Web camera/upload */
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Camera Button */}
+                <button
+                  type="button"
+                  onClick={() => cameraInputRef.current?.click()}
+                  className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-border p-8 transition-colors hover:border-primary hover:bg-accent"
+                >
+                  <Camera className="h-12 w-12 text-muted-foreground mb-3" />
                 <span className="text-sm font-medium">Take Photo</span>
                 <span className="text-xs text-muted-foreground mt-1">
                   Use camera
                 </span>
-              </button>
+                </button>
 
-              {/* File Upload Button */}
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-border p-8 transition-colors hover:border-primary hover:bg-accent"
-              >
-                <Upload className="h-12 w-12 text-muted-foreground mb-3" />
-                <span className="text-sm font-medium">Upload Image</span>
-                <span className="text-xs text-muted-foreground mt-1">
-                  From gallery
-                </span>
-              </button>
-            </div>
+                {/* File Upload Button */}
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-border p-8 transition-colors hover:border-primary hover:bg-accent"
+                >
+                  <Upload className="h-12 w-12 text-muted-foreground mb-3" />
+                  <span className="text-sm font-medium">Upload Image</span>
+                  <span className="text-xs text-muted-foreground mt-1">
+                    From gallery
+                  </span>
+                </button>
+              </div>
+            )}
 
-            {/* Hidden inputs */}
-            <input
-              ref={cameraInputRef}
-              type="file"
-              accept="image/*"
-              capture="environment"
-              className="hidden"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) handleFileSelect(file);
-              }}
-            />
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) handleFileSelect(file);
-              }}
-            />
+            {/* Hidden inputs (Web only) */}
+            {!Platform.isNative && (
+              <>
+                <input
+                  ref={cameraInputRef}
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleFileSelect(file);
+                  }}
+                />
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleFileSelect(file);
+                  }}
+                />
+              </>
+            )}
           </div>
         ) : (
           <div className="space-y-4">
