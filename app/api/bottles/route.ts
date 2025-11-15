@@ -229,12 +229,17 @@ export async function POST(request: NextRequest) {
 
           if (!generated) return;
 
+          const updates: Record<string, unknown> = {
+            description: generated.description,
+            ai_generated_summary: generated.summary,
+            enrichment_data: generated.enrichmentData,
+            enrichment_generated_at: new Date().toISOString(),
+            enrichment_version: '2.0.0',
+          };
+
           const { error: updateError } = await supabase
             .from('wines')
-            .update({
-              description: generated.description,
-              ai_generated_summary: generated.summary,
-            })
+            .update(updates)
             .eq('id', wineId);
 
           if (updateError) {
@@ -341,7 +346,7 @@ export async function GET(request: NextRequest) {
         const wineIds = (matchingWines || []).map((wine) => wine.id);
 
         if (wineIds.length === 0) {
-          return NextResponse.json([]);
+          return NextResponse.json({ bottles: [] });
         }
 
         query = query.in('wine_id', wineIds);
@@ -360,7 +365,7 @@ export async function GET(request: NextRequest) {
 
     const normalizedBottles = (bottles || []).map((bottle) => normalizeBottleRecord(bottle));
 
-    return NextResponse.json(normalizedBottles);
+    return NextResponse.json({ bottles: normalizedBottles });
   } catch (error) {
     console.error('Error in GET /api/bottles:', error);
     return NextResponse.json(

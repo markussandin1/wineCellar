@@ -250,14 +250,18 @@ export async function getBottles(filters?: {
   if (filters?.search) params.set('search', filters.search);
 
   const query = params.toString();
-  return apiGet(`/api/bottles${query ? `?${query}` : ''}`);
+  const response = await apiGet<{ bottles: any[] }>(
+    `/api/bottles${query ? `?${query}` : ''}`
+  );
+  return response.bottles ?? [];
 }
 
 /**
  * Get bottle by ID
  */
 export async function getBottle(id: string) {
-  return apiGet(`/api/bottles/${id}`);
+  const response = await apiGet<{ bottle: any }>(`/api/bottles/${id}`);
+  return response.bottle;
 }
 
 /**

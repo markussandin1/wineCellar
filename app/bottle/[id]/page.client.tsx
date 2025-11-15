@@ -16,8 +16,8 @@ export default function BottlePage() {
     if (!id) return;
 
     getBottle(id)
-      .then(data => {
-        setBottle(data.bottle);
+      .then(result => {
+        setBottle(result);
         setLoading(false);
       })
       .catch(error => {

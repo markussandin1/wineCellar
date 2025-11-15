@@ -87,7 +87,10 @@ Wine
 ├── decant_time_minutes (integer, nullable)
 │
 ├── -- AI/External Data --
-├── description (text, nullable)
+├── description (text, nullable) // derived from enrichment_data for legacy views
+├── enrichment_data (jsonb, nullable) // canonical AI profile (summary, terroir, notes, food pairings)
+├── enrichment_generated_at (timestamp, nullable)
+├── enrichment_version (string, nullable)
 ├── tasting_notes (text, nullable)
 ├── external_ids (jsonb) // {vivino_id, wine_searcher_id, etc}
 ├── ai_generated_summary (text, nullable)
@@ -98,6 +101,8 @@ Wine
 ├── updated_at (timestamp)
 ├── verified (boolean, default false)
 └── data_source (string, nullable)
+
+> `enrichment_data` is now the single source-of-truth for wine narratives (summary, terroir, tasting notes, pairings, etc.). The `description` column is auto-generated from that JSON for legacy components and should not be written directly.
 ```
 
 ---

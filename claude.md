@@ -122,24 +122,10 @@ Web App (unchanged):
 
 ## Recent Updates (2025-11-12)
 
-### Hybrid Architecture - API Routes + Server Actions
-Implemented correct architecture pattern for Capacitor compatibility while maintaining optimal performance.
+### Unified API-First Architecture
+All platforms now consume the same REST layer. Server Components reuse the API routes via `lib/api/server` (forwards cookies/headers automatically), so SSR + web client + native client share identical behavior and there are no more Server Actions to maintain.
 
-**Problem Identified:**
-- Initial attempt: Converting all Server Actions to API routes
-- Issue: Server Components calling API routes via HTTP loses auth context (401 errors)
-- Root cause: Cookies don't forward on server-side fetch calls
-
-**Solution - Hybrid Architecture (Industry Standard):**
-
-**Server Components (SSR) → Server Actions (Direct Database Access)**
-- `app/dashboard/page.tsx` → `getDashboardStats()` from `app/actions/dashboard.ts`
-- `app/settings/page.tsx` → `getUserProfile()` from `app/actions/settings.ts`
-- `app/cellar/page.tsx` → `getBottles()` from `app/actions/bottle.ts`
-- `app/bottle/[id]/page.tsx` → `getBottle()` from `app/actions/bottle.ts`
-- **Why**: No HTTP overhead, auth context preserved, faster rendering
-
-**Client Components → API Routes (HTTP)**
+**Client & Native Components → API Routes (HTTP)**
 - `components/bottles/bottle-form.tsx` → `POST /api/bottles`
 - `components/bottles/scanned-bottle-form.tsx` → `POST /api/bottles/from-scan`
 - `components/bottles/bottle-detail.tsx` → `DELETE /api/bottles/[id]`
@@ -147,11 +133,14 @@ Implemented correct architecture pattern for Capacitor compatibility while maint
 - `components/bottles/consume-bottle-modal.tsx` → `POST /api/bottles/[id]/consume`
 - `components/layout/nav.tsx` → `POST /api/auth/logout`
 - `app/settings/SettingsContent.tsx` → `PATCH /api/user/profile`, `PATCH /api/user/password`, `DELETE /api/user/account`
-- **Why**: Works from browser, enables native app support
+- **Why**: Works from browser + Capacitor, enables native app support
 
-**Native Apps → API Routes (HTTPS to Vercel)**
-- iOS/Android → `https://wine-cellar.vercel.app/api/*`
-- **Why**: Cross-platform compatibility, single codebase
+**Server Components → `lib/api/server` → API Routes**
+- `app/dashboard/page.tsx` → `serverGetDashboardStats()` → `/api/dashboard/stats`
+- `app/settings/page.tsx` → `serverGetUserProfile()` → `/api/user/profile`
+- `app/cellar/page.tsx` → `serverGetBottles()` → `/api/bottles`
+- `app/bottle/[id]/page.tsx` → `serverGetBottle()` → `/api/bottles/[id]`
+- **Why**: Keeps cookies/session intact without direct Supabase calls, eliminates duplicate business logic.
 
 **API Client Implementation (`/lib/api/client.ts`):**
 - Platform-aware URL construction (lazy evaluation to avoid webpack issues)

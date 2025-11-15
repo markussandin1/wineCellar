@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { Wine, Plus, TrendingUp, BarChart3 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
-import { getDashboardStats } from '@/app/actions/dashboard';
+import { serverGetDashboardStats } from '@/lib/api/server';
 import { PageHeader, StatCard } from '@/lib/design-system';
 import { FoodPairingWidget } from '@/components/food-pairing/FoodPairingWidget';
 
@@ -15,7 +15,7 @@ export default async function DashboardPage() {
     redirect('/login');
   }
 
-  const stats = await getDashboardStats();
+  const stats = await serverGetDashboardStats();
 
   const topTypes = Object.entries(stats.byType)
     .sort(([, a], [, b]) => (b as number) - (a as number))
@@ -47,8 +47,8 @@ export default async function DashboardPage() {
         {/* Stats Grid */}
         <div className="grid gap-4 sm:gap-6 md:grid-cols-3 mb-8 sm:mb-12">
           <StatCard
-            label="Total Bottles"
-            value={stats.totalBottles}
+            label="Your Collection"
+            value={`${stats.uniqueWines} Wines • ${stats.totalBottles} Bottles`}
             subtitle="In your cellar"
             icon={<Wine className="h-5 w-5" />}
           />

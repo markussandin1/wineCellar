@@ -61,7 +61,7 @@ export async function GET(
       );
     }
 
-    return NextResponse.json(normalizedBottle);
+    return NextResponse.json({ bottle: normalizedBottle });
   } catch (error) {
     console.error('Error in GET /api/bottles/[id]:', error);
     return NextResponse.json(

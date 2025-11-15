@@ -1,15 +1,18 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { MapPin, DollarSign } from 'lucide-react';
 import { BottleFilters } from './bottle-filters';
-import { WineTypeIcon, WineTypeBadge, type WineType, playfair } from '@/lib/design-system';
+import { BottleLabelImage } from './bottle-label-image';
+import { BottleSizeBadge } from './bottle-size-badge';
+import { WineGroupCard } from './wine-group-card';
+import { WineTypeIcon, type WineType, playfair } from '@/lib/design-system';
 
 type Bottle = {
   id: string;
   quantity: number;
+  bottleSize: number;
   purchasePrice: string | null;
   currency: string | null;
   purchaseDate: Date | null;
@@ -30,10 +33,27 @@ type Bottle = {
   } | null;
 };
 
-export type ViewMode = 'grid-3' | 'grid-6' | 'list';
+export type ViewMode = 'grid-3' | 'grid-6' | 'list' | 'grouped';
 
 export function BottleList({ bottles }: { bottles: Bottle[] }) {
-  const [viewMode, setViewMode] = useState<ViewMode>('grid-3');
+  const [viewMode, setViewMode] = useState<ViewMode>('grouped');
+
+  // Group bottles by wine
+  const groupedBottles = useMemo(() => {
+    const groups = new Map<string, { wine: Bottle['wine'], bottles: Bottle[] }>();
+
+    bottles.forEach((bottle) => {
+      if (!bottle.wine) return;
+
+      const wineId = bottle.wine.id;
+      if (!groups.has(wineId)) {
+        groups.set(wineId, { wine: bottle.wine, bottles: [] });
+      }
+      groups.get(wineId)!.bottles.push(bottle);
+    });
+
+    return Array.from(groups.values());
+  }, [bottles]);
 
   const getStatusBadge = (status: string) => {
     const styles = {
@@ -72,38 +92,45 @@ export function BottleList({ bottles }: { bottles: Bottle[] }) {
     <div className="space-y-6">
       <BottleFilters viewMode={viewMode} setViewMode={setViewMode} totalCount={bottles.length} />
 
-      {viewMode !== 'list' ? (
+      {viewMode === 'grouped' ? (
+        <div className="space-y-4">
+          {groupedBottles.map((group) => {
+            if (!group.wine) return null;
+            return (
+              <WineGroupCard
+                key={group.wine.id}
+                wine={group.wine}
+                bottles={group.bottles}
+              />
+            );
+          })}
+        </div>
+      ) : viewMode !== 'list' ? (
         <div className={`grid ${getGridColumns()} gap-6`}>
           {bottles.map((bottle) => {
             const wineType = (bottle.wine?.wineType?.toLowerCase() || null) as WineType | null;
+            const labelImage = bottle.labelImageUrl || bottle.wine?.primaryLabelImageUrl || undefined;
 
             return (
               <Link
                 key={bottle.id}
                 href={`/bottle/${bottle.id}`}
-                className="group relative block overflow-hidden rounded-xl border border-amber-900/30 bg-gradient-to-br from-[#2A1F1A] to-[#1A1410] hover:scale-105 transition-all shadow-lg hover:shadow-amber-900/20"
+                className="group relative flex flex-col overflow-hidden rounded-xl border border-amber-900/30 bg-gradient-to-br from-[#2A1F1A] to-[#1A1410] hover:scale-105 transition-all shadow-lg hover:shadow-amber-900/20"
               >
-                {/* Label Image */}
-                <div className="relative w-full h-48 bg-[#1A1410]">
-                  {(bottle.labelImageUrl || bottle.wine?.primaryLabelImageUrl) ? (
-                    <Image
-                      src={bottle.labelImageUrl || bottle.wine?.primaryLabelImageUrl || ''}
-                      alt={`${bottle.wine?.name || 'Wine'} label`}
-                      fill
-                      className="object-cover group-hover:scale-105 transition-transform"
-                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                    />
-                  ) : (
-                    <div className="flex items-center justify-center h-full">
-                      <WineTypeIcon type={wineType} className="w-16 h-16" />
-                    </div>
-                  )}
-                </div>
+                <BottleLabelImage
+                  src={labelImage}
+                  alt={`${bottle.wine?.name || 'Wine'} label`}
+                  wineType={wineType}
+                  className="rounded-none rounded-t-xl rounded-b-[1.75rem]"
+                />
 
-                <div className="p-6">
+                <div className="px-6 pb-6 pt-4">
                   <div className="flex justify-between items-start mb-4">
                     <WineTypeIcon type={wineType} className="w-8 h-8" />
-                    {getStatusBadge(bottle.status)}
+                    <div className="flex flex-col gap-2 items-end">
+                      {getStatusBadge(bottle.status)}
+                      <BottleSizeBadge sizeInMl={bottle.bottleSize} />
+                    </div>
                   </div>
 
                   <h3 className={`${playfair.className} font-semibold text-lg mb-1 text-gray-100`}>
@@ -165,6 +192,7 @@ export function BottleList({ bottles }: { bottles: Bottle[] }) {
         <div className="space-y-3">
           {bottles.map((bottle) => {
             const wineType = (bottle.wine?.wineType?.toLowerCase() || null) as WineType | null;
+            const labelImage = bottle.labelImageUrl || bottle.wine?.primaryLabelImageUrl || undefined;
 
             return (
               <Link
@@ -173,21 +201,13 @@ export function BottleList({ bottles }: { bottles: Bottle[] }) {
                 className="block rounded-xl border border-amber-900/30 bg-gradient-to-br from-[#2A1F1A] to-[#1A1410] overflow-hidden hover:scale-[1.02] transition-all shadow-lg hover:shadow-amber-900/20"
               >
                 <div className="flex items-center gap-4 p-4">
-                  {/* Thumbnail */}
-                  <div className="relative w-20 h-20 flex-shrink-0 bg-[#1A1410] rounded-lg overflow-hidden">
-                    {bottle.labelImageUrl ? (
-                      <Image
-                        src={bottle.labelImageUrl}
-                        alt={`${bottle.wine?.name || 'Wine'} label`}
-                        fill
-                        className="object-cover"
-                        sizes="80px"
-                      />
-                    ) : (
-                      <div className="flex items-center justify-center h-full">
-                        <WineTypeIcon type={wineType} className="w-10 h-10" />
-                      </div>
-                    )}
+                  <div className="w-24 flex-shrink-0">
+                    <BottleLabelImage
+                      src={labelImage}
+                      alt={`${bottle.wine?.name || 'Wine'} label`}
+                      wineType={wineType}
+                      className="shadow-none"
+                    />
                   </div>
 
                   <div className="flex-1 min-w-0">
@@ -196,6 +216,7 @@ export function BottleList({ bottles }: { bottles: Bottle[] }) {
                         {bottle.wine?.fullName || 'Unknown Wine'}
                       </h3>
                       {getStatusBadge(bottle.status)}
+                      <BottleSizeBadge sizeInMl={bottle.bottleSize} />
                     </div>
                     <p className="text-sm text-gray-300">
                       {bottle.wine?.region}, {bottle.wine?.country}

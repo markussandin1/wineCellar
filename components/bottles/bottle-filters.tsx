@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Search, Grid3x3, List } from 'lucide-react';
+import { Search, Grid3x3, List, Layers } from 'lucide-react';
 import { useState } from 'react';
 import type { ViewMode } from './bottle-list';
 
@@ -119,16 +119,28 @@ export function BottleFilters({
           <span className="text-sm text-amber-400 font-medium">{totalCount} bottles</span>
           <div className="flex gap-1 rounded-lg border border-amber-900/30 p-1 bg-[#1A1410]">
             <button
+              onClick={() => setViewMode('grouped')}
+              className={`p-2 rounded transition-all ${
+                viewMode === 'grouped'
+                  ? 'bg-gradient-to-r from-amber-400 to-yellow-500 text-black'
+                  : 'text-gray-400 hover:text-amber-400'
+              }`}
+              title="Group by wine"
+            >
+              <Layers className="h-4 w-4" />
+            </button>
+            <button
               onClick={() => {
                 // Toggle between grid sizes: 3 <-> 6
                 if (viewMode === 'grid-3') setViewMode('grid-6');
                 else setViewMode('grid-3');
               }}
               className={`p-2 rounded flex items-center gap-1 transition-all ${
-                viewMode !== 'list'
+                viewMode === 'grid-3' || viewMode === 'grid-6'
                   ? 'bg-gradient-to-r from-amber-400 to-yellow-500 text-black'
                   : 'text-gray-400 hover:text-amber-400'
               }`}
+              title="Grid view"
             >
               <Grid3x3 className="h-4 w-4" />
               <span className="text-xs font-medium">
@@ -142,6 +154,7 @@ export function BottleFilters({
                   ? 'bg-gradient-to-r from-amber-400 to-yellow-500 text-black'
                   : 'text-gray-400 hover:text-amber-400'
               }`}
+              title="List view"
             >
               <List className="h-4 w-4" />
             </button>

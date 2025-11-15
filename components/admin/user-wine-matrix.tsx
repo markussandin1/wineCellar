@@ -1,5 +1,4 @@
 'use client';
-
 import { useState } from 'react';
 import {
   Table,
@@ -10,6 +9,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
+import Link from 'next/link';
 import { Search } from 'lucide-react';
 
 interface UserWineEntry {
@@ -26,12 +26,12 @@ interface UserWineEntry {
   }>;
 }
 
-interface UserWineMatrixProps {
-  data: UserWineEntry[];
-}
-
-export function UserWineMatrix({ data }: UserWineMatrixProps) {
+export function UserWineMatrix({ data }: { data: UserWineEntry[] }) {
   const [search, setSearch] = useState('');
+
+  const normalizedSearch = search.trim().toLowerCase();
+  const matchesSearch = (value?: string | null) =>
+    (value ?? '').toLowerCase().includes(normalizedSearch);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('sv-SE', {
@@ -41,14 +41,17 @@ export function UserWineMatrix({ data }: UserWineMatrixProps) {
     }).format(value);
   };
 
-  const filteredData = data.filter(
-    (user) =>
-      user.userName.toLowerCase().includes(search.toLowerCase()) ||
-      user.userEmail.toLowerCase().includes(search.toLowerCase()) ||
-      user.wines.some((wine) =>
-        wine.wineName.toLowerCase().includes(search.toLowerCase())
-      )
-  );
+  const filteredData = data.filter((user) => {
+    if (!normalizedSearch) {
+      return true;
+    }
+
+    return (
+      matchesSearch(user.userName) ||
+      matchesSearch(user.userEmail) ||
+      user.wines.some((wine) => matchesSearch(wine.wineName))
+    );
+  });
 
   return (
     <div className="space-y-4">
@@ -114,7 +117,15 @@ export function UserWineMatrix({ data }: UserWineMatrixProps) {
                                 key={wine.wineId}
                                 className="text-sm text-neutral-700"
                               >
-                                {wine.wineName} ({wine.quantity} st)
+                                <Link
+                                  href={`/admin/wines?wineId=${encodeURIComponent(wine.wineId)}`}
+                                  className="font-medium text-purple-700 hover:text-purple-900 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-700"
+                                >
+                                  {wine.wineName ?? 'Okänt vin'}
+                                </Link>{' '}
+                                <span className="text-neutral-600">
+                                  ({wine.quantity} st)
+                                </span>
                               </div>
                             ))}
                             {user.wines.length > 3 && (

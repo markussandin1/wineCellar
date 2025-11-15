@@ -1,7 +1,9 @@
 import { Suspense } from 'react';
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
-import { getUserProfile } from '@/app/actions/settings';
+import { createClient } from '@/lib/supabase/server';
+import { serverGetUserProfile } from '@/lib/api/server';
 import SettingsContent from './SettingsContent';
 
 export const metadata = {
@@ -10,7 +12,14 @@ export const metadata = {
 };
 
 export default async function SettingsPage() {
-  const profile = await getUserProfile();
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect('/login');
+  }
+
+  const profile = await serverGetUserProfile();
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">

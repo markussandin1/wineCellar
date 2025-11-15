@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { WineDataTable } from '@/components/admin/wine-table';
 import { WineSearchBar } from '@/components/admin/wine-search-bar';
 import { WineFilters } from '@/components/admin/wine-filters';
@@ -41,6 +42,11 @@ interface WineFiltersState {
 }
 
 export default function WinesCatalogPage() {
+  const searchParams = useSearchParams();
+  const focusWineIdParam = searchParams.get('wineId');
+  const focusWineId = focusWineIdParam && focusWineIdParam.trim().length > 0
+    ? focusWineIdParam
+    : null;
   const [wines, setWines] = useState<Wine[]>([]);
   const [loading, setLoading] = useState(true);
   const [pagination, setPagination] = useState({
@@ -143,6 +149,7 @@ export default function WinesCatalogPage() {
           <WineDataTable
             wines={wines}
             onRefresh={fetchWines}
+            focusWineId={focusWineId}
           />
 
           {/* Pagination */}

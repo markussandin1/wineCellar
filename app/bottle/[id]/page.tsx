@@ -1,7 +1,7 @@
 import { redirect, notFound } from 'next/navigation';
 import { BottleDetail } from '@/components/bottles/bottle-detail';
 import { createClient } from '@/lib/supabase/server';
-import { getBottle } from '@/app/actions/bottle';
+import { serverGetBottle } from '@/lib/api/server';
 
 export default async function BottlePage({ params }: { params: Promise<{ id: string }> }) {
   const supabase = await createClient();
@@ -15,7 +15,7 @@ export default async function BottlePage({ params }: { params: Promise<{ id: str
   const { id } = await params;
 
   try {
-    const bottle = await getBottle(id);
+    const bottle = await serverGetBottle(id);
 
     if (!bottle) {
       console.error(`Bottle not found: ${id}, user: ${user.id}`);

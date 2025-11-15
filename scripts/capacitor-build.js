@@ -16,8 +16,6 @@ const path = require('path');
 const APP_DIR = path.join(__dirname, '..', 'app');
 const API_DIR = path.join(APP_DIR, 'api');
 const API_BACKUP_DIR = path.join(APP_DIR, '_api_backup');
-const ACTIONS_DIR = path.join(APP_DIR, 'actions');
-const ACTIONS_BACKUP_DIR = path.join(APP_DIR, '_actions_backup');
 const BOTTLE_DIR = path.join(APP_DIR, 'bottle');
 const BOTTLE_BACKUP_DIR = path.join(APP_DIR, '_bottle_backup');
 
@@ -47,14 +45,6 @@ if (fs.existsSync(API_DIR)) {
   }
   fs.renameSync(API_DIR, API_BACKUP_DIR);
   console.log('  ✓ API routes backed up (will run on Vercel)');
-}
-
-if (fs.existsSync(ACTIONS_DIR)) {
-  if (fs.existsSync(ACTIONS_BACKUP_DIR)) {
-    fs.rmSync(ACTIONS_BACKUP_DIR, { recursive: true, force: true });
-  }
-  fs.renameSync(ACTIONS_DIR, ACTIONS_BACKUP_DIR);
-  console.log('  ✓ Server actions backed up (incompatible with static export)');
 }
 
 if (fs.existsSync(BOTTLE_DIR)) {
@@ -121,14 +111,6 @@ try {
     }
     fs.renameSync(API_BACKUP_DIR, API_DIR);
     console.log('  ✓ API routes restored');
-  }
-
-  if (fs.existsSync(ACTIONS_BACKUP_DIR)) {
-    if (fs.existsSync(ACTIONS_DIR)) {
-      fs.rmSync(ACTIONS_DIR, { recursive: true, force: true });
-    }
-    fs.renameSync(ACTIONS_BACKUP_DIR, ACTIONS_DIR);
-    console.log('  ✓ Server actions restored');
   }
 
   if (fs.existsSync(BOTTLE_BACKUP_DIR)) {

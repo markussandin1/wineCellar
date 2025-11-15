@@ -1,12 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { Camera, Edit3, Layers } from 'lucide-react';
+import { Camera, Search, Layers } from 'lucide-react';
 import { BottleForm } from './bottle-form';
 import { LabelScanner } from './label-scanner';
 import { BatchLabelScanner } from './batch-label-scanner';
+import { WineSearch } from './wine-search';
 
-type Mode = 'choice' | 'scan' | 'batch' | 'manual';
+type Mode = 'choice' | 'scan' | 'batch' | 'search';
 type Placement = 'cellar' | 'watchlist';
 
 interface AddBottleChoiceProps {
@@ -16,6 +17,7 @@ interface AddBottleChoiceProps {
 export function AddBottleChoice({ userCurrency }: AddBottleChoiceProps) {
   const [mode, setMode] = useState<Mode>('choice');
   const [placement, setPlacement] = useState<Placement>('cellar');
+  const [selectedWineId, setSelectedWineId] = useState<string | null>(null);
 
   if (mode === 'scan') {
     return (
@@ -47,7 +49,27 @@ export function AddBottleChoice({ userCurrency }: AddBottleChoiceProps) {
     );
   }
 
-  if (mode === 'manual') {
+  if (mode === 'search') {
+    // If wine selected, show bottle form
+    if (selectedWineId) {
+      return (
+        <div>
+          <button
+            onClick={() => {
+              setSelectedWineId(null);
+              setMode('choice');
+            }}
+            className="mb-4 sm:mb-6 px-3 py-2 rounded-lg bg-amber-900/20 border border-amber-900/30 text-sm text-amber-400 hover:text-yellow-400 hover:bg-amber-900/30 transition-colors font-medium inline-flex items-center gap-2"
+          >
+            <span>←</span>
+            <span>Back to search</span>
+          </button>
+          <BottleForm initialPlacement={placement} existingWineId={selectedWineId} />
+        </div>
+      );
+    }
+
+    // Show wine search
     return (
       <div>
         <button
@@ -57,7 +79,13 @@ export function AddBottleChoice({ userCurrency }: AddBottleChoiceProps) {
           <span>←</span>
           <span>Back to options</span>
         </button>
-        <BottleForm initialPlacement={placement} />
+        <div className="rounded-xl border border-amber-900/30 bg-gradient-to-br from-[#2A1F1A] to-[#1A1410] p-6">
+          <h2 className="text-xl font-semibold text-amber-400 mb-2">Search Your Wines</h2>
+          <p className="text-sm text-gray-400 mb-6">
+            Find a wine you already own to add another bottle
+          </p>
+          <WineSearch onSelectWine={(wine) => setSelectedWineId(wine.id)} />
+        </div>
       </div>
     );
   }
@@ -145,24 +173,24 @@ export function AddBottleChoice({ userCurrency }: AddBottleChoiceProps) {
           </div>
         </button>
 
-        {/* Manual Entry Option */}
+        {/* Search Wines Option */}
         <button
-          onClick={() => setMode('manual')}
+          onClick={() => setMode('search')}
           className="group relative overflow-hidden rounded-xl border border-amber-900/30 bg-gradient-to-br from-[#2A1F1A] to-[#1A1410] p-6 text-center transition-all hover:scale-105 hover:border-amber-500/50 shadow-lg hover:shadow-amber-900/20"
         >
           <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-amber-500/20 to-yellow-400/10 rounded-full blur-2xl" />
           <div className="relative flex flex-col items-center space-y-3">
             <div className="rounded-full bg-amber-900/30 p-3 transition-all group-hover:bg-amber-500/20 border border-amber-500/30">
-              <Edit3 className="h-6 w-6 text-amber-400" />
+              <Search className="h-6 w-6 text-amber-400" />
             </div>
             <div>
-              <h3 className="text-base font-semibold text-gray-100">Enter Manually</h3>
+              <h3 className="text-base font-semibold text-gray-100">Search Wines</h3>
               <p className="mt-1 text-xs text-gray-400">
-                Type in details yourself
+                Add bottle of existing wine
               </p>
             </div>
             <div className="mt-2 inline-flex items-center text-xs font-medium text-amber-400">
-              Full Control
+              Quick Restock
               <span className="ml-1">→</span>
             </div>
           </div>

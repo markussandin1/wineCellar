@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { BottleList } from '@/components/bottles/bottle-list';
 import { Plus } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
-import { getBottles } from '@/app/actions/bottle';
+import { serverGetBottles } from '@/lib/api/server';
 import { PageHeader } from '@/lib/design-system';
 
 export default async function CellarPage({
@@ -21,7 +21,7 @@ export default async function CellarPage({
 
   const params = await searchParams;
 
-  const bottles = await getBottles({
+  const bottles = await serverGetBottles({
     wineType: params.type,
     region: params.region,
     status: params.status,

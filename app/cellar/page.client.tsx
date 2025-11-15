@@ -39,8 +39,8 @@ export default function CellarPage({
       status: params.status,
       search: params.search,
     })
-      .then(data => {
-        setBottles(data.bottles || []);
+      .then(bottleList => {
+        setBottles(bottleList || []);
         setLoading(false);
       })
       .catch(error => {

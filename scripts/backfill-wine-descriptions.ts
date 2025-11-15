@@ -1,11 +1,8 @@
 import 'dotenv/config';
-import path from 'path';
-// Load Prisma client from project root to keep relative path stable after compilation
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const { PrismaClient } = require(path.join(process.cwd(), 'lib/generated/prisma'));
 import { generateWineDescription } from '../lib/ai/wine-description';
+import { getSupabaseAdmin } from '../lib/supabase';
 
-const prisma = new PrismaClient();
+const supabase = getSupabaseAdmin();
 
 const args = process.argv.slice(2);
 const dryRun = args.includes('--dry-run');
@@ -29,55 +26,84 @@ if (maxToProcess !== null && (Number.isNaN(maxToProcess) || maxToProcess <= 0)) 
   throw new Error('Invalid --max value; expected positive integer');
 }
 
-type WineRecord = Awaited<ReturnType<typeof prisma.wine.findFirst>>;
+interface WineRow {
+  id: string;
+  name: string;
+  producer_name: string;
+  wine_type: string | null;
+  vintage: number | null;
+  country: string | null;
+  region: string | null;
+  sub_region: string | null;
+  primary_grape: string | null;
+}
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function processWine(wine: NonNullable<WineRecord>) {
-  console.log(`\nProcessing ${wine.id} — ${wine.producerName} ${wine.name}`);
+async function fetchBatch(offset: number, limit: number) {
+  const { data, error } = await supabase
+    .from('wines')
+    .select(
+      `id,name,producer_name,wine_type,vintage,country,region,sub_region,primary_grape`
+    )
+    .is('enrichment_data', null)
+    .order('created_at', { ascending: true })
+    .range(offset, offset + limit - 1);
+
+  if (error) {
+    throw error;
+  }
+
+  return data as WineRow[] | null;
+}
+
+async function processWine(wine: WineRow) {
+  console.log(`\nProcessing ${wine.id} — ${wine.producer_name} ${wine.name}`);
 
   const generated = await generateWineDescription({
     name: wine.name,
-    producerName: wine.producerName,
-    wineType: wine.wineType ?? undefined,
+    producerName: wine.producer_name,
+    wineType: wine.wine_type ?? undefined,
     vintage: wine.vintage ?? undefined,
     country: wine.country ?? undefined,
     region: wine.region ?? undefined,
-    subRegion: wine.subRegion ?? undefined,
-    primaryGrape: wine.primaryGrape ?? undefined,
+    subRegion: wine.sub_region ?? undefined,
+    primaryGrape: wine.primary_grape ?? undefined,
   });
 
   if (!generated) {
-    console.warn('No description generated; skipping update');
+    console.warn('No enrichment generated; skipping update');
     return false;
   }
 
   if (dryRun) {
-    console.log('Dry run — generated text preview:');
-    console.log(generated.description.substring(0, 200).trim() + (generated.description.length > 200 ? '…' : ''));
+    console.log('Dry run — generated summary:', generated.summary);
     return false;
   }
 
-  await prisma.wine.update({
-    where: { id: wine.id },
-    data: {
+  const { error } = await supabase
+    .from('wines')
+    .update({
       description: generated.description,
-      aiGeneratedSummary: generated.summary,
-    },
-  });
+      ai_generated_summary: generated.summary,
+      enrichment_data: generated.enrichmentData,
+      enrichment_generated_at: new Date().toISOString(),
+      enrichment_version: '2.0.0',
+    })
+    .eq('id', wine.id);
+
+  if (error) {
+    console.error('Failed to update wine:', error.message);
+    return false;
+  }
 
   return true;
 }
 
 async function main() {
-  if (!process.env.OPENAI_API_KEY && !process.env.OpenAI_API_Key) {
-    console.error('Missing OpenAI API key in environment. Aborting.');
-    process.exit(1);
-  }
-
-  console.log('Starting wine description backfill');
+  console.log('Starting wine enrichment backfill');
   console.log(`Options → batch: ${batchSize}, delay: ${delayMs}ms, dryRun: ${dryRun}`);
   if (maxToProcess) {
     console.log(`Will stop after ${maxToProcess} wines`);
@@ -85,6 +111,7 @@ async function main() {
 
   let processed = 0;
   let updated = 0;
+  let offset = 0;
 
   while (true) {
     const remaining = maxToProcess ? Math.max(maxToProcess - processed, 0) : batchSize;
@@ -93,21 +120,9 @@ async function main() {
     }
 
     const take = maxToProcess ? Math.min(batchSize, remaining) : batchSize;
+    const wines = await fetchBatch(offset, take);
 
-    const wines = await prisma.wine.findMany({
-      where: {
-        OR: [
-          { description: null },
-          { description: '' },
-          { aiGeneratedSummary: null },
-          { aiGeneratedSummary: '' },
-        ],
-      },
-      orderBy: { createdAt: 'asc' },
-      take,
-    });
-
-    if (wines.length === 0) {
+    if (!wines || wines.length === 0) {
       break;
     }
 
@@ -126,16 +141,14 @@ async function main() {
         break;
       }
     }
+
+    offset += wines.length;
   }
 
   console.log(`\nDone. Processed ${processed} wines; updated ${updated}.`);
 }
 
-main()
-  .catch((error) => {
-    console.error('Backfill failed', error);
-    process.exitCode = 1;
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
-  });
+main().catch((error) => {
+  console.error('Backfill failed', error);
+  process.exitCode = 1;
+});

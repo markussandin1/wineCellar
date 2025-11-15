@@ -23,6 +23,7 @@ type Placement = 'cellar' | 'watchlist';
 
 interface BottleFormProps {
   initialPlacement?: Placement;
+  existingWineId?: string;
 }
 
 interface SelectedWine {
@@ -41,13 +42,14 @@ interface SelectedWine {
 const WATCHLIST_DESCRIPTION =
   'Save wines you want to remember without adding inventory. Quantity will be stored as zero and purchase fields become optional.';
 
-export function BottleForm({ initialPlacement = 'cellar' }: BottleFormProps) {
+export function BottleForm({ initialPlacement = 'cellar', existingWineId }: BottleFormProps) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [selectedWine, setSelectedWine] = useState<SelectedWine | null>(null);
+  const [loadingWine, setLoadingWine] = useState(!!existingWineId);
 
   const initialWatchList = initialPlacement === 'watchlist';
 
@@ -66,6 +68,39 @@ export function BottleForm({ initialPlacement = 'cellar' }: BottleFormProps) {
       shouldValidate: false,
     });
   }, [initialPlacement, setValue]);
+
+  // Fetch and pre-populate wine data if existingWineId is provided
+  useEffect(() => {
+    if (!existingWineId) return;
+
+    async function fetchWineData() {
+      try {
+        const response = await fetch(`/api/wines/${existingWineId}`);
+        if (response.ok) {
+          const data = await response.json();
+          const wine = data.wine;
+          setSelectedWine({
+            id: wine.id,
+            name: wine.name,
+            producerName: wine.producerName,
+            vintage: wine.vintage,
+            wineType: wine.wineType,
+            country: wine.country,
+            region: wine.region,
+            subRegion: wine.subRegion,
+            primaryGrape: wine.primaryGrape,
+            primaryLabelImageUrl: wine.primaryLabelImageUrl,
+          });
+        }
+      } catch (err) {
+        console.error('Error fetching wine:', err);
+      } finally {
+        setLoadingWine(false);
+      }
+    }
+
+    fetchWineData();
+  }, [existingWineId]);
 
   const producerValue = watch('producerName');
 

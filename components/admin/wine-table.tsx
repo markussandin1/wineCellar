@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import {
   Table,
@@ -42,11 +42,66 @@ interface Wine {
 interface WineDataTableProps {
   wines: Wine[];
   onRefresh: () => void;
+  focusWineId?: string | null;
 }
 
-export function WineDataTable({ wines, onRefresh }: WineDataTableProps) {
+export function WineDataTable({ wines, onRefresh, focusWineId }: WineDataTableProps) {
   const [editingWine, setEditingWine] = useState<Wine | null>(null);
   const [deletingWine, setDeletingWine] = useState<Wine | null>(null);
+  const [pendingFocusId, setPendingFocusId] = useState<string | null>(focusWineId ?? null);
+  const [isFetchingFocus, setIsFetchingFocus] = useState(false);
+
+  useEffect(() => {
+    setPendingFocusId(focusWineId ?? null);
+  }, [focusWineId]);
+
+  useEffect(() => {
+    if (!pendingFocusId || editingWine || isFetchingFocus) {
+      return;
+    }
+
+    const wineInList = wines.find((wine) => wine.id === pendingFocusId);
+
+    if (wineInList) {
+      setEditingWine(wineInList);
+      setPendingFocusId(null);
+      return;
+    }
+
+    let isActive = true;
+
+    async function loadWineById() {
+      try {
+        setIsFetchingFocus(true);
+        const res = await fetch(`/api/admin/wines/${pendingFocusId}`);
+
+        if (!res.ok) {
+          throw new Error('Failed to load wine');
+        }
+
+        const data = await res.json();
+
+        if (!isActive || !data?.wine) {
+          return;
+        }
+
+        setEditingWine(data.wine as Wine);
+      } catch (error) {
+        console.error('Failed to load wine by id:', error);
+      } finally {
+        if (isActive) {
+          setIsFetchingFocus(false);
+          setPendingFocusId(null);
+        }
+      }
+    }
+
+    loadWineById();
+
+    return () => {
+      isActive = false;
+    };
+  }, [pendingFocusId, wines, editingWine, isFetchingFocus]);
 
   return (
     <>
@@ -121,11 +176,11 @@ export function WineDataTable({ wines, onRefresh }: WineDataTableProps) {
                     </TableCell>
                     <TableCell className="text-center">
                       <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-blue-50 text-blue-700 text-sm font-medium">
-                        {wine.userCount}
+                        {wine.userCount ?? 0}
                       </span>
                     </TableCell>
                     <TableCell className="text-center font-medium text-neutral-900">
-                      {wine.bottleCount}
+                      {wine.bottleCount ?? 0}
                     </TableCell>
                     <TableCell>
                       <span

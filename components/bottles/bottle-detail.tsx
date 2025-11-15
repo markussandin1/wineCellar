@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
@@ -9,6 +9,8 @@ import { deleteBottle } from '@/lib/api/client';
 import { ConsumeBottleModal } from './consume-bottle-modal';
 import { EditBottleModal } from './edit-bottle-modal';
 import { WineTypeIcon, playfair } from '@/lib/design-system';
+import type { WineEnrichmentOutput } from '@/lib/ai/agents/wine-enrichment/wine-enrichment.types';
+import { WineProfile } from './wine-profile';
 
 type Bottle = {
   id: string;
@@ -39,6 +41,7 @@ type Bottle = {
     primaryLabelImageUrl: string | null;
     description?: string | null;
     aiGeneratedSummary?: string | null;
+    enrichmentData?: Partial<WineEnrichmentOutput> | null;
   } | null;
   consumptionLogs: Array<{
     id: string;
@@ -48,11 +51,6 @@ type Bottle = {
     occasion: string | null;
   }>;
 };
-
-type DescriptionBlock =
-  | { type: 'paragraph'; body: string }
-  | { type: 'section'; title: string; body: string }
-  | { type: 'list'; title: string; items: string[] };
 
 export function BottleDetail({ bottle }: { bottle: Bottle }) {
   const router = useRouter();
@@ -77,29 +75,7 @@ export function BottleDetail({ bottle }: { bottle: Bottle }) {
     }).format(new Date(date));
   };
 
-  const parsedDescription = useMemo<DescriptionBlock[]>(() => {
-    const description = bottle.wine?.description;
-    if (!description) return [];
-
-    return description
-      .split('\n\n')
-      .map((block) => block.split('\n').map((line) => line.trim()).filter(Boolean))
-      .filter((lines) => lines.length > 0)
-      .map((lines) => {
-        if (lines.length === 1) {
-          return { type: 'paragraph', body: lines[0] };
-        }
-
-        const [heading, ...rest] = lines;
-        const listItems = rest.filter((line) => line.startsWith('• ')).map((line) => line.replace(/^•\s*/, ''));
-
-        if (listItems.length === rest.length && listItems.length > 0) {
-          return { type: 'list', title: heading, items: listItems };
-        }
-
-        return { type: 'section', title: heading, body: rest.join('\n') };
-      });
-  }, [bottle.wine?.description]);
+  const wineSummary = bottle.wine?.aiGeneratedSummary || bottle.wine?.enrichmentData?.summary;
 
   const handleDelete = async () => {
     setIsDeleting(true);
@@ -184,9 +160,9 @@ export function BottleDetail({ bottle }: { bottle: Bottle }) {
                 {bottle.wine?.producerName}
                 {bottle.wine?.vintage && ` • ${bottle.wine.vintage}`}
               </p>
-              {bottle.wine?.aiGeneratedSummary && (
+              {wineSummary && (
                 <p className="mt-4 text-base leading-relaxed text-gray-300">
-                  {bottle.wine.aiGeneratedSummary}
+                  {wineSummary}
                 </p>
               )}
             </div>
@@ -298,47 +274,7 @@ export function BottleDetail({ bottle }: { bottle: Bottle }) {
         </div>
 
         {/* Wine Profile - Detailed description */}
-        {parsedDescription.length > 0 && (
-          <div className="relative overflow-hidden rounded-xl border border-amber-900/30 bg-gradient-to-br from-[#2A1F1A] to-[#1A1410] p-6">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-amber-400/10 to-yellow-500/5 rounded-full blur-3xl" />
-            <h2 className={`${playfair.className} relative text-xl font-semibold mb-4 text-gray-100`}>Wine Profile</h2>
-            <div className="relative space-y-4 text-sm leading-relaxed text-gray-300">
-              {parsedDescription.map((block, index) => {
-                if (block.type === 'paragraph') {
-                  return (
-                    <p key={index} className="text-base text-gray-300">
-                      {block.body}
-                    </p>
-                  );
-                }
-
-                if (block.type === 'section') {
-                  return (
-                    <div key={index} className="space-y-2">
-                      <h3 className="text-sm font-semibold uppercase tracking-wide text-amber-400">
-                        {block.title}
-                      </h3>
-                      <p className="whitespace-pre-line text-base text-gray-300">{block.body}</p>
-                    </div>
-                  );
-                }
-
-                return (
-                  <div key={index} className="space-y-2">
-                    <h3 className="text-sm font-semibold uppercase tracking-wide text-amber-400">
-                      {block.title}
-                    </h3>
-                    <ul className="list-disc list-inside space-y-1 text-gray-300">
-                      {block.items?.map((item, idx) => (
-                        <li key={idx}>{item}</li>
-                      ))}
-                    </ul>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
+        <WineProfile enrichmentData={bottle.wine?.enrichmentData} />
 
         {/* Consumption History */}
         {bottle.consumptionLogs.length > 0 && (

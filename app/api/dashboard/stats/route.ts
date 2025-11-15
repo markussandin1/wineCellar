@@ -49,6 +49,10 @@ export async function GET() {
     // Calculate total bottles (sum of quantities)
     const totalBottles = bottlesArray.reduce((sum, bottle) => sum + bottle.quantity, 0);
 
+    // Calculate unique wines count
+    const uniqueWineIds = new Set(bottlesArray.map(bottle => bottle.wine?.id).filter(Boolean));
+    const uniqueWines = uniqueWineIds.size;
+
     // Calculate total value
     const totalValue = bottlesArray.reduce((sum, bottle) => {
       if (bottle.purchasePrice) {
@@ -95,6 +99,7 @@ export async function GET() {
 
     return NextResponse.json({
       totalBottles,
+      uniqueWines,
       totalValue,
       currency: bottlesArray.find((b) => b.currency)?.currency || 'USD',
       recentBottles: serializedRecentBottles,
