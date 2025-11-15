@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
 
       const likePattern = `%${escapeLike(searchTerm)}%`;
 
-      wineQuery = wineQuery.or(`name.ilike.${likePattern},producer_name.ilike.${likePattern},full_name.ilike.${likePattern}`);
+      wineQuery = wineQuery.or(`name.ilike.${likePattern},producer_name.ilike.${likePattern},full_name.ilike.${likePattern},primary_grape.ilike.${likePattern}`);
     }
 
     // Order by name and limit results
